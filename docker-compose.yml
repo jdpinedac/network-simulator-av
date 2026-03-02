@@ -1,0 +1,71 @@
+# ============================================================
+# Simulador de Jitter y Latencia para Video/Audio sobre IP
+# Conferencia: "Hackeando la Señal" - AVIXA 2026
+# ============================================================
+
+services:
+
+  # -----------------------------------------------------------
+  # SENDER: Genera y transmite el stream de video+audio
+  #   - FFmpeg produce barras de color con reloj y contador
+  #   - tc netem inyecta latencia/jitter/pérdida de paquetes
+  # -----------------------------------------------------------
+  sender:
+    build:
+      context: ./sender
+      dockerfile: Dockerfile
+    container_name: av_sender
+    hostname: sender
+    cap_add:
+      - NET_ADMIN       # Necesario para tc (traffic control)
+    networks:
+      av_net:
+        ipv4_address: 172.28.0.10
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - RECEIVER_IP=172.28.0.20
+      - RECEIVER_PORT=5004
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # -----------------------------------------------------------
+  # RECEIVER: Recibe y muestra el stream degradado
+  #   - FFplay abre ventana con el video recibido
+  #   - Muestra artefactos causados por los impairments
+  # -----------------------------------------------------------
+  receiver:
+    build:
+      context: ./receiver
+      dockerfile: Dockerfile
+    container_name: av_receiver
+    hostname: receiver
+    networks:
+      av_net:
+        ipv4_address: 172.28.0.20
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - LISTEN_PORT=5004
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+# -----------------------------------------------------------
+# RED AISLADA para la simulación AV
+# Subnet: 172.28.0.0/24
+# Sender:   172.28.0.10
+# Receiver: 172.28.0.20
+# -----------------------------------------------------------
+networks:
+  av_net:
+    driver: bridge
+    name: av_simulation_net
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
