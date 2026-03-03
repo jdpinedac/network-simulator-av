@@ -17,7 +17,10 @@
       "Read(//cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/**)",
       "Bash(docker exec av_sender ping -c 8 172.28.0.20)",
       "Bash(docker exec av_sender tc -s qdisc show dev eth0)",
-      "Bash(docker exec av_sender pkill -f ffmpeg)"
+      "Bash(docker exec av_sender pkill -f ffmpeg)",
+      "Bash(docker exec av_sender ps aux)",
+      "Bash(docker exec av_sender timeout 5 ffmpeg -hide_banner -f lavfi -i \"aevalsrc=sin\\(2*PI*t*\\(300+350*\\(1+sin\\(2*PI*t/3\\)\\)\\)\\):s=48000\" -t 2 -c:a aac -b:a 128k -f null -)",
+      "Bash(docker exec av_sender /demo/apply-netem.sh clear)"
     ]
   }
 }

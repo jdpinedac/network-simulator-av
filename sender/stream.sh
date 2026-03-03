@@ -6,7 +6,8 @@
 # Genera un stream MPEG-TS sobre UDP con:
 #   - Video: barras SMPTE + ruido + reloj + frame counter (modo defecto)
 #          O video real desde archivo (si INPUT_VIDEO está definido)
-#   - Audio: tono senoidal de 1kHz (los glitches se escuchan muy claro)
+#   - Audio: chirp sweep 300-1000Hz (modo defecto) — glitches muy audibles
+#          O pista de audio del archivo (si INPUT_VIDEO tiene audio)
 #
 # NOTA TÉCNICA - ¿Por qué ruido y all-I-frames?
 #   El contenido SMPTE estático es tan predecible que H.264 lo codifica
@@ -22,6 +23,11 @@ RESOLUTION="${RESOLUTION:-1280x720}"
 FRAMERATE="${FRAMERATE:-25}"
 VIDEO_BITRATE="${VIDEO_BITRATE:-4000k}"
 AUDIO_FREQ="${AUDIO_FREQ:-1000}"
+
+# Modo de audio: "sweep" (chirp 300-1000Hz) o "tone" (tono fijo)
+# El sweep cambia frecuencia continuamente → cualquier corte produce un click audible.
+# Con tono fijo los cortes son casi imperceptibles por la monotonía de la señal.
+AUDIO_MODE="${AUDIO_MODE:-sweep}"
 
 # GOP para video real: keyframes cada N frames.
 # Mayor valor = artefactos más prolongados con video real.
@@ -39,6 +45,25 @@ FONT="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 SCALE_W="${RESOLUTION%x*}"   # "1280"
 SCALE_H="${RESOLUTION#*x}"   # "720"
 
+# ============================================================
+# Audio: señal de prueba configurable
+# ============================================================
+#   "sweep" (defecto): chirp 300→1000Hz, ciclo 3 segundos.
+#     La frecuencia cambia en cada muestra → un paquete perdido
+#     produce un "click" audible por la discontinuidad de fase.
+#   "tone": tono fijo (1kHz por defecto) — señal monótona,
+#     los cortes son sutiles y difíciles de percibir.
+case "$AUDIO_MODE" in
+    tone)
+        AUDIO_FILTER="sine=frequency=${AUDIO_FREQ}:sample_rate=48000"
+        AUDIO_DESC="Tono fijo ${AUDIO_FREQ}Hz"
+        ;;
+    *)
+        AUDIO_FILTER="aevalsrc=sin(2*PI*t*(300+350*(1+sin(2*PI*t/3)))):s=48000"
+        AUDIO_DESC="Chirp sweep 300-1000Hz (3s)"
+        ;;
+esac
+
 echo ""
 echo "=============================================="
 echo "  SIMULADOR AV - AVIXA 2026"
@@ -47,11 +72,19 @@ echo "=============================================="
 echo ""
 echo "  Destino : udp://$RECEIVER_IP:$RECEIVER_PORT"
 echo "  Video   : $RESOLUTION @ ${FRAMERATE}fps  $VIDEO_BITRATE"
-echo "  Audio   : tono ${AUDIO_FREQ} Hz"
 if [ -n "$INPUT_VIDEO" ] && [ -f "$INPUT_VIDEO" ]; then
+    # Detectar si el archivo tiene pista de audio
+    HAS_FILE_AUDIO=$(ffprobe -loglevel quiet -select_streams a \
+        -show_entries stream=codec_type -of csv=p=0 "$INPUT_VIDEO" 2>/dev/null | head -1)
+    if [ "$HAS_FILE_AUDIO" = "audio" ]; then
+        echo "  Audio   : pista del archivo (voz/música → degradación muy evidente)"
+    else
+        echo "  Audio   : $AUDIO_DESC (archivo sin audio)"
+    fi
     echo "  Fuente  : ARCHIVO: $INPUT_VIDEO"
     echo "  GOP     : ${GOP} frames (I-frame cada $(echo "scale=1; ${GOP} / ${FRAMERATE}" | bc)s)"
 else
+    echo "  Audio   : $AUDIO_DESC"
     echo "  Fuente  : SMPTE HD Bars + noise (all I-frames)"
     echo "  GOP     : 1 (cada frame es I-frame independiente)"
 fi
@@ -71,9 +104,6 @@ OVERLAY_FILTERS="
   drawtext=fontfile=${FONT}:text='FRAME %{n}':fontsize=36:fontcolor=yellow:x=20:y=110:box=1:boxcolor=black@0.6:boxborderw=6,
   drawtext=fontfile=${FONT}:text='SRC 172.28.0.10  >>  DST 172.28.0.20':fontsize=28:fontcolor=cyan:x=(w-text_w)/2:y=h-60:box=1:boxcolor=black@0.7:boxborderw=6"
 
-# Audio: tono puro de 1kHz — los cortes y glitches se oyen perfectamente
-AUDIO_FILTER="sine=frequency=${AUDIO_FREQ}:sample_rate=48000"
-
 # Destino UDP
 UDP_OUT="udp://${RECEIVER_IP}:${RECEIVER_PORT}?pkt_size=1316&buffer_size=65536"
 
@@ -86,28 +116,54 @@ if [ -n "$INPUT_VIDEO" ] && [ -f "$INPUT_VIDEO" ]; then
     FILE_VIDEO_FILTER="scale=${SCALE_W}:${SCALE_H}:force_original_aspect_ratio=decrease,\
 pad=${SCALE_W}:${SCALE_H}:(ow-iw)/2:(oh-ih)/2,setsar=1,${OVERLAY_FILTERS}"
 
-    exec ffmpeg -hide_banner \
-      -re -stream_loop -1 -i "$INPUT_VIDEO" \
-      -f lavfi -i "${AUDIO_FILTER}" \
-      -filter_complex "[0:v]${FILE_VIDEO_FILTER}[vout]" \
-      -map "[vout]" \
-      -map "1:a" \
-      -c:v libx264 \
-        -preset ultrafast \
-        -tune zerolatency \
-        -g "${GOP}" \
-        -keyint_min "${GOP}" \
-        -sc_threshold 0 \
-        -b:v "${VIDEO_BITRATE}" \
-        -maxrate "${VIDEO_BITRATE}" \
-        -bufsize 2000k \
-        -pix_fmt yuv420p \
-      -c:a aac \
-        -b:a 128k \
-        -ar 48000 \
-      -f mpegts \
-      -mpegts_flags resend_headers \
-      "${UDP_OUT}"
+    # Si el archivo tiene audio, usarlo directamente (voz/música = degradación
+    # muy evidente). Si no, usar la señal de audio generada (sweep/tone).
+    if [ "$HAS_FILE_AUDIO" = "audio" ]; then
+        exec ffmpeg -hide_banner \
+          -re -stream_loop -1 -i "$INPUT_VIDEO" \
+          -filter_complex "[0:v]${FILE_VIDEO_FILTER}[vout]" \
+          -map "[vout]" \
+          -map "0:a" \
+          -c:v libx264 \
+            -preset ultrafast \
+            -tune zerolatency \
+            -g "${GOP}" \
+            -keyint_min "${GOP}" \
+            -sc_threshold 0 \
+            -b:v "${VIDEO_BITRATE}" \
+            -maxrate "${VIDEO_BITRATE}" \
+            -bufsize 2000k \
+            -pix_fmt yuv420p \
+          -c:a aac \
+            -b:a 128k \
+            -ar 48000 \
+          -f mpegts \
+          -mpegts_flags resend_headers \
+          "${UDP_OUT}"
+    else
+        exec ffmpeg -hide_banner \
+          -re -stream_loop -1 -i "$INPUT_VIDEO" \
+          -f lavfi -i "${AUDIO_FILTER}" \
+          -filter_complex "[0:v]${FILE_VIDEO_FILTER}[vout]" \
+          -map "[vout]" \
+          -map "1:a" \
+          -c:v libx264 \
+            -preset ultrafast \
+            -tune zerolatency \
+            -g "${GOP}" \
+            -keyint_min "${GOP}" \
+            -sc_threshold 0 \
+            -b:v "${VIDEO_BITRATE}" \
+            -maxrate "${VIDEO_BITRATE}" \
+            -bufsize 2000k \
+            -pix_fmt yuv420p \
+          -c:a aac \
+            -b:a 128k \
+            -ar 48000 \
+          -f mpegts \
+          -mpegts_flags resend_headers \
+          "${UDP_OUT}"
+    fi
 
 # ============================================================
 # Modo B: SMPTE HD Bars + noise (modo por defecto)

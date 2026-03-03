@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    pulseaudio-utils \
     iputils-ping \
     net-tools \
     tcpdump \

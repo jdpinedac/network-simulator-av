@@ -51,8 +51,12 @@ services:
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - LISTEN_PORT=5004
+      # PulseAudio/PipeWire: necesario para que FFplay reproduzca audio
+      - PULSE_SERVER=unix:/run/user/1000/pulse/native
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Socket de PulseAudio del host → audio en los parlantes
+      - /run/user/1000/pulse:/run/user/1000/pulse:rw
     stdin_open: true
     tty: true
     restart: unless-stopped

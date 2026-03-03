@@ -34,6 +34,8 @@ CURRENT_SCENARIO="Sin impairments (Red Ideal)"
 # Fuente de video para el stream
 VIDEO_SOURCE_PATH=""              # vacío = SMPTE bars por defecto
 CURRENT_VIDEO_SOURCE="SMPTE HD Bars"
+CURRENT_AUDIO_MODE="sweep"                # sweep o tone
+CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz"
 
 # ============================================================
 # Funciones de utilidad
@@ -107,11 +109,16 @@ start_streaming() {
     echo -e "${CYAN}Fuente: ${WHITE}${CURRENT_VIDEO_SOURCE}${NC}"
     echo -e "${CYAN}El proceso corre en background del contenedor.${NC}\n"
 
-    # Iniciar stream en background; pasar INPUT_VIDEO si hay video seleccionado
+    # Iniciar stream en background; pasar INPUT_VIDEO y AUDIO_MODE
     if [ -n "$VIDEO_SOURCE_PATH" ]; then
-        docker exec -d -e INPUT_VIDEO="$VIDEO_SOURCE_PATH" "$SENDER" /demo/stream.sh
+        docker exec -d \
+            -e INPUT_VIDEO="$VIDEO_SOURCE_PATH" \
+            -e AUDIO_MODE="$CURRENT_AUDIO_MODE" \
+            "$SENDER" /demo/stream.sh
     else
-        docker exec -d "$SENDER" /demo/stream.sh
+        docker exec -d \
+            -e AUDIO_MODE="$CURRENT_AUDIO_MODE" \
+            "$SENDER" /demo/stream.sh
     fi
     sleep 2
 
@@ -151,6 +158,7 @@ select_video_source() {
     if [ "$video_choice" = "0" ]; then
         VIDEO_SOURCE_PATH=""
         CURRENT_VIDEO_SOURCE="SMPTE HD Bars"
+        CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz"
         echo -e "${GREEN}✓ Fuente seleccionada: SMPTE HD Bars${NC}"
     else
         local selected_file
@@ -158,13 +166,56 @@ select_video_source() {
         if [ -n "$selected_file" ]; then
             VIDEO_SOURCE_PATH="/videos/$selected_file"
             CURRENT_VIDEO_SOURCE="VIDEO: $selected_file"
+            # Detectar si el archivo tiene audio
+            local has_audio
+            has_audio=$(docker exec "$SENDER" ffprobe -loglevel quiet -select_streams a \
+                -show_entries stream=codec_type -of csv=p=0 "/videos/$selected_file" 2>/dev/null | head -1)
+            if [ "$has_audio" = "audio" ]; then
+                CURRENT_AUDIO_DESC="Audio del archivo (voz/música)"
+            else
+                CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz (archivo sin audio)"
+            fi
             echo -e "${GREEN}✓ Fuente seleccionada: $selected_file${NC}"
+            echo -e "${CYAN}  Audio: ${CURRENT_AUDIO_DESC}${NC}"
         else
             echo -e "${RED}Opción no válida. Se mantiene la fuente actual.${NC}"
         fi
     fi
 
     echo -e "\n${YELLOW}Usa la opción 's' para reiniciar el stream con la nueva fuente.${NC}"
+    echo -ne "${YELLOW}Presiona Enter para continuar...${NC}"
+    read -r
+}
+
+select_audio_mode() {
+    echo ""
+    echo -e "${CYAN}=== Selección de Modo de Audio ===${NC}"
+    echo ""
+    echo -e "${WHITE}  1.${NC} Chirp sweep 300-1000Hz ${CYAN}(recomendado — degradación muy evidente)${NC}"
+    echo -e "     ${WHITE}Barrido de frecuencia continuo. Cualquier pérdida de paquetes${NC}"
+    echo -e "     ${WHITE}produce clicks audibles por la discontinuidad de fase.${NC}"
+    echo ""
+    echo -e "${WHITE}  2.${NC} Tono fijo 1kHz ${CYAN}(original — degradación sutil)${NC}"
+    echo -e "     ${WHITE}Señal monótona. Los cortes son casi imperceptibles.${NC}"
+    echo ""
+    echo -ne "Selecciona [1]: "
+    read -r audio_choice
+    audio_choice="${audio_choice:-1}"
+
+    case "$audio_choice" in
+        2)
+            CURRENT_AUDIO_MODE="tone"
+            CURRENT_AUDIO_DESC="Tono fijo 1kHz"
+            echo -e "${GREEN}✓ Audio: Tono fijo 1kHz${NC}"
+            ;;
+        *)
+            CURRENT_AUDIO_MODE="sweep"
+            CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz"
+            echo -e "${GREEN}✓ Audio: Chirp sweep 300-1000Hz${NC}"
+            ;;
+    esac
+
+    echo -e "\n${YELLOW}Usa la opción 's' para reiniciar el stream con el nuevo audio.${NC}"
     echo -ne "${YELLOW}Presiona Enter para continuar...${NC}"
     read -r
 }
@@ -238,6 +289,7 @@ show_status_bar() {
     echo -e "${color}  Escenario actual: $CURRENT_SCENARIO${NC}"
     echo -e "  Latencia: ${WHITE}${CURRENT_DELAY}ms${NC}  |  Jitter: ${WHITE}${CURRENT_JITTER}ms${NC}  |  Pérdida: ${WHITE}${CURRENT_LOSS}%${NC}  |  Corrupción: ${WHITE}${CURRENT_CORRUPT}%${NC}"
     echo -e "  Fuente  : ${WHITE}${CURRENT_VIDEO_SOURCE}${NC}"
+    echo -e "  Audio   : ${WHITE}${CURRENT_AUDIO_DESC}${NC}"
 }
 
 # ============================================================
@@ -272,6 +324,7 @@ show_menu() {
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  s.${NC} Iniciar stream (sender)                                  ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  f.${NC} Seleccionar fuente de video (archivo/SMPTE)              ${BLUE}║${NC}"
+    echo -e "${BLUE}║${CYAN}  a.${NC} Seleccionar modo de audio (sweep/tono)                  ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  v.${NC} Abrir video en nueva ventana (FFplay)                    ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  x.${NC} Cerrar ventana de video                                  ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  p.${NC} Limpiar todos los impairments (red limpia)               ${BLUE}║${NC}"
@@ -425,6 +478,9 @@ while true; do
             if check_containers; then
                 select_video_source
             fi
+            ;;
+        a|A)
+            select_audio_mode
             ;;
         s|S)
             if check_containers; then
