@@ -24,10 +24,10 @@ FRAMERATE="${FRAMERATE:-25}"
 VIDEO_BITRATE="${VIDEO_BITRATE:-4000k}"
 AUDIO_FREQ="${AUDIO_FREQ:-1000}"
 
-# Modo de audio: "sweep" (chirp 300-1000Hz) o "tone" (tono fijo)
+# Modo de audio: "tone" (tono fijo 1kHz, defecto) o "sweep" (chirp 300-1000Hz)
 # El sweep cambia frecuencia continuamente → cualquier corte produce un click audible.
-# Con tono fijo los cortes son casi imperceptibles por la monotonía de la señal.
-AUDIO_MODE="${AUDIO_MODE:-sweep}"
+# Con tono fijo los cortes son más sutiles pero es la señal de prueba estándar.
+AUDIO_MODE="${AUDIO_MODE:-tone}"
 
 # GOP para video real: keyframes cada N frames.
 # Mayor valor = artefactos más prolongados con video real.

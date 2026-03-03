@@ -20,7 +20,27 @@
       "Bash(docker exec av_sender pkill -f ffmpeg)",
       "Bash(docker exec av_sender ps aux)",
       "Bash(docker exec av_sender timeout 5 ffmpeg -hide_banner -f lavfi -i \"aevalsrc=sin\\(2*PI*t*\\(300+350*\\(1+sin\\(2*PI*t/3\\)\\)\\)\\):s=48000\" -t 2 -c:a aac -b:a 128k -f null -)",
-      "Bash(docker exec av_sender /demo/apply-netem.sh clear)"
+      "Bash(docker exec av_sender /demo/apply-netem.sh clear)",
+      "Bash(docker exec av_receiver timeout 5 ffmpeg -hide_banner -loglevel info -i \"udp://0.0.0.0:5005?buffer_size=65536&fifo_size=65536&overrun_nonfatal=1&timeout=3000000\" -t 1 -f null -)",
+      "Bash(docker exec av_receiver timeout 4 ffmpeg -hide_banner -loglevel warning -fflags nobuffer -ec 0 -i \"udp://0.0.0.0:5005?buffer_size=65536&fifo_size=2048&overrun_nonfatal=1&timeout=3000000\" -t 2 -f null -)",
+      "Bash(docker exec -d -e AUDIO_MODE=sweep av_sender /demo/stream.sh)",
+      "Bash(docker exec av_receiver timeout 4 ffmpeg -hide_banner -loglevel warning -fflags nobuffer -ec 0 -i \"udp://0.0.0.0:5004?buffer_size=65536&fifo_size=2048&overrun_nonfatal=1&reuse=1&timeout=3000000\" -t 2 -c copy -f null -)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(docker exec av_receiver grep \"sync\" /demo/receive.sh)",
+      "Bash(docker exec -d -e AUDIO_MODE=tone av_sender /demo/stream.sh)",
+      "Bash(docker exec av_receiver timeout 15 ffplay -hide_banner -loglevel info -nostats -fflags nobuffer -ec 0 -flags low_delay -framedrop -probesize 1000000 -analyzeduration 1000000 -nodisp -x 1280 -y 720 \"udp://0.0.0.0:5004?buffer_size=65536&fifo_size=2048&overrun_nonfatal=1\")",
+      "Bash(docker exec av_receiver timeout 5 ffmpeg -hide_banner -loglevel warning -fflags nobuffer -ec 0 -flags low_delay -i \"udp://0.0.0.0:5004?buffer_size=65536&fifo_size=2048&overrun_nonfatal=1\" -f null -)",
+      "Bash(__NEW_LINE_2de436b978fbfd41__ echo \"=== Phase 2: Apply catastrophic, decode 8 seconds ===\")",
+      "Bash(docker exec av_receiver timeout 8 ffmpeg -hide_banner -loglevel warning -fflags nobuffer -ec 0 -flags low_delay -i \"udp://0.0.0.0:5004?buffer_size=65536&fifo_size=2048&overrun_nonfatal=1\" -f null -)",
+      "Bash(__NEW_LINE_eb2d68e4dd47195a__ echo \"=== Phase 3: Clear impairments, decode 10 seconds \\(should be clean\\) ===\")",
+      "Bash(docker exec av_receiver timeout 10 ffmpeg -hide_banner -loglevel warning -fflags nobuffer -ec 0 -flags low_delay -i \"udp://0.0.0.0:5004?buffer_size=65536&fifo_size=2048&overrun_nonfatal=1\" -f null -)",
+      "Bash(awk 'BEGIN{start=systime\\(\\); prev=-1}:*)",
+      "Bash(__NEW_LINE_1e2ce7ea4990ec45__ wait)",
+      "Bash(echo \">>>:*)",
+      "Bash(awk 'BEGIN{start=systime\\(\\); prev=-1; count=0} {t=systime\\(\\)-start; if\\(t!=prev && prev>=0\\) {print prev\"\"s: \"\"count\"\" errors\"\"; count=0} count++; prev=t} END{if\\(count>0\\) print prev\"\"s: \"\"count\"\" errors\"\"}')",
+      "Bash(__NEW_LINE_117f867958404429__ wait)",
+      "Bash(docker builder prune -f)",
+      "Bash(docker exec -d -e DISPLAY=\"$DISPLAY\" av_receiver /demo/receive.sh)"
     ]
   }
 }

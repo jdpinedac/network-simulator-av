@@ -34,8 +34,8 @@ CURRENT_SCENARIO="Sin impairments (Red Ideal)"
 # Fuente de video para el stream
 VIDEO_SOURCE_PATH=""              # vacío = SMPTE bars por defecto
 CURRENT_VIDEO_SOURCE="SMPTE HD Bars"
-CURRENT_AUDIO_MODE="sweep"                # sweep o tone
-CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz"
+CURRENT_AUDIO_MODE="tone"                 # tone o sweep
+CURRENT_AUDIO_DESC="Tono fijo 1kHz"
 
 # ============================================================
 # Funciones de utilidad
@@ -83,7 +83,14 @@ clear_impairments() {
     CURRENT_LOSS=0
     CURRENT_CORRUPT=0
     CURRENT_SCENARIO="Sin impairments (Red Ideal)"
-    echo -e "${GREEN}✓ Red limpia${NC}\n"
+
+    # Reiniciar FFplay para vaciar colas internas del decodificador.
+    # FFplay acumula hasta 15MB (~30s) de datos corruptos en colas internas
+    # que no se pueden limpiar externamente. Al matarlo, el loop en
+    # receive.sh lo reinicia automáticamente con buffers limpios.
+    docker exec "$RECEIVER" pkill -f ffplay 2>/dev/null || true
+
+    echo -e "${GREEN}✓ Red limpia (video reiniciado)${NC}\n"
 }
 
 show_netem_status() {
@@ -155,10 +162,18 @@ select_video_source() {
     read -r video_choice
     video_choice="${video_choice:-0}"
 
+    # Descripción de audio según modo actual
+    local audio_mode_desc
+    if [ "$CURRENT_AUDIO_MODE" = "sweep" ]; then
+        audio_mode_desc="Chirp sweep 300-1000Hz"
+    else
+        audio_mode_desc="Tono fijo 1kHz"
+    fi
+
     if [ "$video_choice" = "0" ]; then
         VIDEO_SOURCE_PATH=""
         CURRENT_VIDEO_SOURCE="SMPTE HD Bars"
-        CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz"
+        CURRENT_AUDIO_DESC="$audio_mode_desc"
         echo -e "${GREEN}✓ Fuente seleccionada: SMPTE HD Bars${NC}"
     else
         local selected_file
@@ -173,7 +188,7 @@ select_video_source() {
             if [ "$has_audio" = "audio" ]; then
                 CURRENT_AUDIO_DESC="Audio del archivo (voz/música)"
             else
-                CURRENT_AUDIO_DESC="Chirp sweep 300-1000Hz (archivo sin audio)"
+                CURRENT_AUDIO_DESC="$audio_mode_desc (archivo sin audio)"
             fi
             echo -e "${GREEN}✓ Fuente seleccionada: $selected_file${NC}"
             echo -e "${CYAN}  Audio: ${CURRENT_AUDIO_DESC}${NC}"
@@ -271,8 +286,9 @@ stop_receiver_display() {
         kill "$RECEIVER_DISPLAY_PID" 2>/dev/null
     fi
     RECEIVER_DISPLAY_PID=""
-    # Matar ffplay dentro del contenedor (método más fiable)
+    # Matar ffplay Y el loop de receive.sh (para que no reinicie)
     docker exec "$RECEIVER" pkill -f ffplay 2>/dev/null || true
+    docker exec "$RECEIVER" pkill -f receive.sh 2>/dev/null || true
     echo -e "${GREEN}✓ Video detenido${NC}"
 }
 
@@ -422,7 +438,7 @@ while true; do
     case "$choice" in
         1)
             if check_containers; then
-                apply_impairment 0 0 0 0 "Red Ideal LAN (0ms / 0ms jitter)"
+                clear_impairments
             fi
             sleep 2
             ;;

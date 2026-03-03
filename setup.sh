@@ -52,6 +52,21 @@ if command -v xhost &>/dev/null; then
         echo -e "${YELLOW}  ! No se pudo configurar xhost (continuar de todas formas)${NC}"
 fi
 
+# 3b. Verificar PulseAudio/PipeWire para audio
+echo -e "${YELLOW}    Verificando audio (PulseAudio/PipeWire)...${NC}"
+PULSE_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pulse/native"
+if [ -S "$PULSE_SOCKET" ]; then
+    echo -e "${GREEN}  ✓ PulseAudio socket: $PULSE_SOCKET${NC}"
+else
+    echo -e "${YELLOW}  ! Socket PulseAudio no encontrado en $PULSE_SOCKET${NC}"
+    echo -e "    El video funcionará pero no habrá audio en el receiver."
+    echo -e "    Verifica que PulseAudio o PipeWire estén corriendo."
+fi
+
+# 3c. Crear directorio de videos personalizados
+mkdir -p videos
+echo -e "${GREEN}  ✓ Directorio ./videos/ listo (copia archivos .mp4/.mkv aquí)${NC}"
+
 # 4. Construir imágenes
 echo -e "${YELLOW}[4/5] Construyendo imágenes Docker...${NC}"
 echo -e "  (Esto puede tardar varios minutos en la primera ejecución)"
@@ -78,6 +93,8 @@ echo -e "  ./demo-control.sh"
 echo ""
 echo -e "  ${YELLOW}# En el menú interactivo:${NC}"
 echo -e "    s → Iniciar streaming"
-echo -e "    v → Abrir ventana de video"
+echo -e "    v → Abrir ventana de video (con audio)"
+echo -e "    f → Seleccionar fuente de video (SMPTE/archivo)"
+echo -e "    a → Seleccionar modo de audio (sweep/tono)"
 echo -e "    1-9 → Aplicar escenarios de red"
 echo ""
