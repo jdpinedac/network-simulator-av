@@ -20,8 +20,15 @@ apply_netem() {
     # Eliminar regla existente (ignorar error si no existe)
     tc qdisc del dev "$IFACE" root 2>/dev/null || true
 
+    # Calcular límite de cola: delay alto → más paquetes en tránsito
+    # ~200 pkt/s × (delay_ms + jitter_ms) / 1000 × 3 (margen) + 2000 base
+    local queue_limit=2000
+    if [ "$delay_ms" -gt 100 ] 2>/dev/null; then
+        queue_limit=$(( (delay_ms + jitter_ms) * 200 * 3 / 1000 + 2000 ))
+    fi
+
     # Construir comando netem
-    local CMD="tc qdisc add dev $IFACE root netem"
+    local CMD="tc qdisc add dev $IFACE root netem limit $queue_limit"
 
     if [ "$delay_ms" -gt 0 ] 2>/dev/null; then
         CMD="$CMD delay ${delay_ms}ms"

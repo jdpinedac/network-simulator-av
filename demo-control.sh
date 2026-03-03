@@ -9,7 +9,9 @@
 
 SENDER="av_sender"
 RECEIVER="av_receiver"
-IFACE="eth0"
+
+# PID del proceso terminal que lanzó FFplay (desde el host)
+RECEIVER_DISPLAY_PID=""
 
 # Colores para terminal
 RED='\033[0;31m'
@@ -106,13 +108,59 @@ start_streaming() {
 }
 
 start_receiver_display() {
-    echo -e "\n${YELLOW}Abriendo display en receiver...${NC}"
-    echo -e "${CYAN}(Necesita X11 habilitado en el host)${NC}\n"
+    # Matar instancia anterior si existe
+    if [ -n "$RECEIVER_DISPLAY_PID" ] && kill -0 "$RECEIVER_DISPLAY_PID" 2>/dev/null; then
+        echo -e "${YELLOW}Cerrando video anterior (PID $RECEIVER_DISPLAY_PID)...${NC}"
+        kill "$RECEIVER_DISPLAY_PID" 2>/dev/null
+        sleep 1
+    fi
 
-    # Permitir conexiones X11 desde Docker
     xhost +local:docker 2>/dev/null || true
+    echo -e "\n${YELLOW}Abriendo ventana de video...${NC}"
 
-    docker exec -e DISPLAY="$DISPLAY" "$RECEIVER" /demo/receive.sh
+    # Buscar terminal disponible para abrir el video en ventana separada
+    # (así el menú de control queda limpio)
+    if command -v xterm &>/dev/null; then
+        xterm \
+            -title "RECEPTOR AV - AVIXA 2026" \
+            -geometry 80x5+0+0 \
+            -bg black -fg green \
+            -e "docker exec -e DISPLAY=$DISPLAY -it $RECEIVER /demo/receive.sh" \
+            2>/dev/null &
+        RECEIVER_DISPLAY_PID=$!
+        echo -e "${GREEN}✓ Video abierto en xterm (PID $RECEIVER_DISPLAY_PID)${NC}"
+    elif command -v gnome-terminal &>/dev/null; then
+        gnome-terminal \
+            --title="RECEPTOR AV - AVIXA 2026" \
+            -- docker exec -e "DISPLAY=$DISPLAY" -it "$RECEIVER" /demo/receive.sh \
+            2>/dev/null &
+        RECEIVER_DISPLAY_PID=$!
+        echo -e "${GREEN}✓ Video abierto en gnome-terminal (PID $RECEIVER_DISPLAY_PID)${NC}"
+    elif command -v konsole &>/dev/null; then
+        konsole -e "docker exec -e DISPLAY=$DISPLAY -it $RECEIVER /demo/receive.sh" \
+            2>/dev/null &
+        RECEIVER_DISPLAY_PID=$!
+        echo -e "${GREEN}✓ Video abierto en konsole (PID $RECEIVER_DISPLAY_PID)${NC}"
+    else
+        # Fallback: background con output a log, no al terminal del menú
+        docker exec -e DISPLAY="$DISPLAY" "$RECEIVER" /demo/receive.sh \
+            >/tmp/av_receiver.log 2>&1 &
+        RECEIVER_DISPLAY_PID=$!
+        echo -e "${GREEN}✓ Video iniciado en background (PID $RECEIVER_DISPLAY_PID)${NC}"
+        echo -e "  Log: ${WHITE}/tmp/av_receiver.log${NC}"
+    fi
+    echo ""
+}
+
+stop_receiver_display() {
+    # Intentar cerrar la ventana terminal (best-effort; gnome-terminal puede ignorarlo)
+    if [ -n "$RECEIVER_DISPLAY_PID" ] && kill -0 "$RECEIVER_DISPLAY_PID" 2>/dev/null; then
+        kill "$RECEIVER_DISPLAY_PID" 2>/dev/null
+    fi
+    RECEIVER_DISPLAY_PID=""
+    # Matar ffplay dentro del contenedor (método más fiable)
+    docker exec "$RECEIVER" pkill -f ffplay 2>/dev/null || true
+    echo -e "${GREEN}✓ Video detenido${NC}"
 }
 
 show_status_bar() {
@@ -154,13 +202,14 @@ show_menu() {
     echo -e "${BLUE}║${RED}  6.${NC} Pérdida de paquetes 5% ${WHITE}( 50ms delay |  20ms jitter | 5% loss)${BLUE}║${NC}"
     echo -e "${BLUE}║${RED}  7.${NC} Pérdida crítica 20%    ${WHITE}(100ms delay |  50ms jitter |20% loss)${BLUE}║${NC}"
     echo -e "${BLUE}║${MAGENTA}  8.${NC} Enlace satelital       ${WHITE}(600ms delay | 200ms jitter | 2% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${MAGENTA}  9.${NC} Catastrófico           ${WHITE}(200ms delay | 200ms jitter |30% loss)${BLUE}║${NC}"
+    echo -e "${BLUE}║${MAGENTA}  9.${NC} Catastrófico           ${WHITE}(300ms delay | 300ms jitter |50% loss)${BLUE}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${BLUE}║${BOLD}${CYAN}  ACCIONES:                                                   ${BLUE}${NC}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  s.${NC} Iniciar stream (sender)                                  ${BLUE}║${NC}"
-    echo -e "${BLUE}║${CYAN}  v.${NC} Abrir video (receiver) - ventana FFplay                  ${BLUE}║${NC}"
+    echo -e "${BLUE}║${CYAN}  v.${NC} Abrir video en nueva ventana (FFplay)                    ${BLUE}║${NC}"
+    echo -e "${BLUE}║${CYAN}  x.${NC} Cerrar ventana de video                                  ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  p.${NC} Limpiar todos los impairments (red limpia)               ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  t.${NC} Ver estado tc netem actual                               ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  i.${NC} Ping: medir latencia real entre contenedores             ${BLUE}║${NC}"
@@ -304,7 +353,7 @@ while true; do
             ;;
         9)
             if check_containers; then
-                apply_impairment 200 200 30 5 "CATASTROFICO (200ms / 200ms jitter / 30% loss / 5% corrupt)"
+                apply_impairment 300 300 50 10 "CATASTROFICO (300ms / 300ms jitter / 50% loss / 10% corrupt)"
             fi
             sleep 2
             ;;
@@ -316,9 +365,13 @@ while true; do
             ;;
         v|V)
             if check_containers; then
-                echo -e "${YELLOW}Abriendo FFplay en una sub-shell (Ctrl+C para volver al menú)...${NC}"
                 start_receiver_display
             fi
+            sleep 1
+            ;;
+        x|X)
+            stop_receiver_display
+            sleep 1
             ;;
         p|P)
             if check_containers; then

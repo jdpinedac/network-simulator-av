@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(docker compose build:*)",
-      "Bash(docker compose down:*)"
+      "Bash(docker compose down:*)",
+      "Bash(echo \"DISPLAY=$DISPLAY\")",
+      "Bash(xhost +local:docker)",
+      "Bash(docker compose up -d)",
+      "Bash(docker ps --format \"table {{.Names}}\\\\t{{.Status}}\")",
+      "Bash(# Test del flujo completo del menú en modo no-interactivo # Verificar que el case receiver-play también funciona xhost +local:docker docker exec -e DISPLAY=:0 -d av_receiver /demo/receive.sh sleep 3 docker exec av_receiver ps aux)",
+      "Bash(docker exec -d av_sender /demo/stream.sh)",
+      "Bash(docker exec -e DISPLAY=:0 -d av_receiver /demo/receive.sh)",
+      "Bash(docker exec av_sender ping -c 3 172.28.0.20)",
+      "Bash(docker exec av_sender /demo/apply-netem.sh apply 300 300 50 10)",
+      "Bash(docker exec av_sender ping -c 5 172.28.0.20)",
+      "Bash(docker exec av_receiver ps aux)",
+      "Read(//cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/**)",
+      "Bash(docker exec av_sender ping -c 8 172.28.0.20)"
     ]
   }
 }

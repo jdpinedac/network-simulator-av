@@ -43,6 +43,8 @@ fi
 #
 ffplay \
   -hide_banner \
+  -loglevel warning \
+  -nostats \
   -fflags nobuffer+discardcorrupt \
   -flags low_delay \
   -framedrop \
@@ -51,4 +53,4 @@ ffplay \
   -sync ext \
   -window_title "RECEPTOR: Video sobre IP | Demo Jitter/Latencia - AVIXA 2026" \
   -x 1280 -y 720 \
-  "udp://0.0.0.0:${LISTEN_PORT}?buffer_size=65536&fifo_size=1000000&overrun_nonfatal=1"
+  "udp://0.0.0.0:${LISTEN_PORT}?buffer_size=65536&fifo_size=65536&overrun_nonfatal=1"
