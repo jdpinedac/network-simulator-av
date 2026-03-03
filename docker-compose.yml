@@ -27,6 +27,9 @@ services:
       - RECEIVER_PORT=5004
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Directorio de videos del host → /videos en el contenedor
+      # Copia tus archivos de video aquí y usa la opción 'f' en demo-control.sh
+      - ./videos:/videos:ro
     stdin_open: true
     tty: true
     restart: unless-stopped

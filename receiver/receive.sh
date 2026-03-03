@@ -34,7 +34,8 @@ fi
 # FFplay con configuración de bajo buffer para mostrar
 # los efectos del jitter en tiempo real:
 #
-#   -fflags nobuffer     : no buffer en el demuxer
+#   -fflags nobuffer     : no buffer en el demuxer (SIN discardcorrupt para ver macroblocks)
+#   -ec 0                : deshabilita error concealment → macroblocks visibles en pérdida
 #   -flags low_delay     : bajo retardo en el decoder
 #   -framedrop           : descarta frames tardíos (hace visible el jitter)
 #   -sync ext            : no auto-sync (muestra desincronización real)
@@ -45,7 +46,8 @@ ffplay \
   -hide_banner \
   -loglevel warning \
   -nostats \
-  -fflags nobuffer+discardcorrupt \
+  -fflags nobuffer \
+  -ec 0 \
   -flags low_delay \
   -framedrop \
   -probesize 1000000 \

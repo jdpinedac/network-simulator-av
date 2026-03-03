@@ -31,6 +31,10 @@ CURRENT_LOSS=0
 CURRENT_CORRUPT=0
 CURRENT_SCENARIO="Sin impairments (Red Ideal)"
 
+# Fuente de video para el stream
+VIDEO_SOURCE_PATH=""              # vacío = SMPTE bars por defecto
+CURRENT_VIDEO_SOURCE="SMPTE HD Bars"
+
 # ============================================================
 # Funciones de utilidad
 # ============================================================
@@ -94,17 +98,75 @@ ping_test() {
 
 start_streaming() {
     echo -e "\n${YELLOW}Iniciando streaming desde sender...${NC}"
+
+    # Detener stream anterior si estaba corriendo
+    docker exec "$SENDER" pkill -f stream.sh 2>/dev/null || true
+    docker exec "$SENDER" pkill -f ffmpeg    2>/dev/null || true
+    sleep 1
+
+    echo -e "${CYAN}Fuente: ${WHITE}${CURRENT_VIDEO_SOURCE}${NC}"
     echo -e "${CYAN}El proceso corre en background del contenedor.${NC}\n"
 
-    # Iniciar stream en background dentro del contenedor
-    docker exec -d "$SENDER" /demo/stream.sh
+    # Iniciar stream en background; pasar INPUT_VIDEO si hay video seleccionado
+    if [ -n "$VIDEO_SOURCE_PATH" ]; then
+        docker exec -d -e INPUT_VIDEO="$VIDEO_SOURCE_PATH" "$SENDER" /demo/stream.sh
+    else
+        docker exec -d "$SENDER" /demo/stream.sh
+    fi
     sleep 2
 
     echo -e "${GREEN}✓ Stream iniciado${NC}"
     echo -e "El receiver ya está escuchando en: ${WHITE}udp://172.28.0.20:5004${NC}"
-    echo -e "\nPara ver el video, abre una nueva terminal y ejecuta:"
-    echo -e "  ${YELLOW}./demo-control.sh receiver-play${NC}"
     echo ""
+}
+
+select_video_source() {
+    echo ""
+    echo -e "${CYAN}=== Selección de Fuente de Video ===${NC}"
+    echo ""
+    echo -e "${WHITE}  0.${NC} SMPTE HD Bars ${CYAN}(por defecto — barras de color estándar)${NC}"
+    echo ""
+
+    # Listar archivos de video disponibles en /videos/ dentro del contenedor
+    local videos
+    videos=$(docker exec "$SENDER" sh -c \
+        'ls /videos/ 2>/dev/null | grep -iE "\.(mp4|mkv|mov|avi|ts|mpg|mpeg)$"' || true)
+
+    if [ -z "$videos" ]; then
+        echo -e "${YELLOW}  (No hay archivos de video en ./videos/ del host)${NC}"
+        echo -e "  Copia archivos .mp4/.mkv/etc. al directorio ${WHITE}./videos/${NC} y reinicia los contenedores."
+    else
+        local i=1
+        while IFS= read -r video; do
+            echo -e "${WHITE}  ${i}.${NC} $video"
+            i=$((i + 1))
+        done <<< "$videos"
+    fi
+
+    echo ""
+    echo -ne "Selecciona [0]: "
+    read -r video_choice
+    video_choice="${video_choice:-0}"
+
+    if [ "$video_choice" = "0" ]; then
+        VIDEO_SOURCE_PATH=""
+        CURRENT_VIDEO_SOURCE="SMPTE HD Bars"
+        echo -e "${GREEN}✓ Fuente seleccionada: SMPTE HD Bars${NC}"
+    else
+        local selected_file
+        selected_file=$(echo "$videos" | sed -n "${video_choice}p")
+        if [ -n "$selected_file" ]; then
+            VIDEO_SOURCE_PATH="/videos/$selected_file"
+            CURRENT_VIDEO_SOURCE="VIDEO: $selected_file"
+            echo -e "${GREEN}✓ Fuente seleccionada: $selected_file${NC}"
+        else
+            echo -e "${RED}Opción no válida. Se mantiene la fuente actual.${NC}"
+        fi
+    fi
+
+    echo -e "\n${YELLOW}Usa la opción 's' para reiniciar el stream con la nueva fuente.${NC}"
+    echo -ne "${YELLOW}Presiona Enter para continuar...${NC}"
+    read -r
 }
 
 start_receiver_display() {
@@ -175,6 +237,7 @@ show_status_bar() {
 
     echo -e "${color}  Escenario actual: $CURRENT_SCENARIO${NC}"
     echo -e "  Latencia: ${WHITE}${CURRENT_DELAY}ms${NC}  |  Jitter: ${WHITE}${CURRENT_JITTER}ms${NC}  |  Pérdida: ${WHITE}${CURRENT_LOSS}%${NC}  |  Corrupción: ${WHITE}${CURRENT_CORRUPT}%${NC}"
+    echo -e "  Fuente  : ${WHITE}${CURRENT_VIDEO_SOURCE}${NC}"
 }
 
 # ============================================================
@@ -208,6 +271,7 @@ show_menu() {
     echo -e "${BLUE}║${BOLD}${CYAN}  ACCIONES:                                                   ${BLUE}${NC}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  s.${NC} Iniciar stream (sender)                                  ${BLUE}║${NC}"
+    echo -e "${BLUE}║${CYAN}  f.${NC} Seleccionar fuente de video (archivo/SMPTE)              ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  v.${NC} Abrir video en nueva ventana (FFplay)                    ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  x.${NC} Cerrar ventana de video                                  ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  p.${NC} Limpiar todos los impairments (red limpia)               ${BLUE}║${NC}"
@@ -356,6 +420,11 @@ while true; do
                 apply_impairment 300 300 50 10 "CATASTROFICO (300ms / 300ms jitter / 50% loss / 10% corrupt)"
             fi
             sleep 2
+            ;;
+        f|F)
+            if check_containers; then
+                select_video_source
+            fi
             ;;
         s|S)
             if check_containers; then

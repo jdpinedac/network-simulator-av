@@ -15,7 +15,9 @@
       "Bash(docker exec av_sender ping -c 5 172.28.0.20)",
       "Bash(docker exec av_receiver ps aux)",
       "Read(//cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/**)",
-      "Bash(docker exec av_sender ping -c 8 172.28.0.20)"
+      "Bash(docker exec av_sender ping -c 8 172.28.0.20)",
+      "Bash(docker exec av_sender tc -s qdisc show dev eth0)",
+      "Bash(docker exec av_sender pkill -f ffmpeg)"
     ]
   }
 }
