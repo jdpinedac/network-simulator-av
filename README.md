@@ -7,26 +7,37 @@
 
 ## Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Red Docker (172.28.0.0/24)                │
-│                                                             │
-│  ┌──────────────────┐    UDP/MPEG-TS     ┌───────────────┐ │
-│  │  av_sender       │ ──────────────────>│  av_receiver  │ │
-│  │  172.28.0.10     │                    │  172.28.0.20  │ │
-│  │                  │                    │               │ │
-│  │  FFmpeg          │                    │  FFplay       │ │
-│  │  (genera video)  │                    │  (muestra     │ │
-│  │                  │                    │   degradación)│ │
-│  │  tc netem        │                    │               │ │
-│  │  (inyecta        │                    │               │ │
-│  │   impairments)   │                    │               │ │
-│  └──────────────────┘                    └───────────────┘ │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                  demo-control.sh (host)
-                  (menú interactivo)
+```mermaid
+flowchart TD
+    %% Definición de estilos
+    classDef network fill:none,stroke:#0984e3,stroke-width:2px,stroke-dasharray: 6 6
+    classDef container fill:#f8f9fa,stroke:#2d3436,stroke-width:2px,color:#2d3436
+    classDef host fill:none,stroke:none,color:#2d3436,font-weight:bold
+
+    %% Red Docker (Contenedor principal)
+    subgraph DockerNetwork ["🐳 Red Docker (172.28.0.0/24)"]
+        direction LR
+        
+        %% Nodo Emisor
+        Sender["<div style='text-align: left;'><b>av_sender</b><br>172.28.0.10<br><br>FFmpeg<br>(genera video)<br><br>tc netem<br>(inyecta<br>impairments)</div>"]
+        
+        %% Nodo Receptor
+        Receiver["<div style='text-align: left;'><b>av_receiver</b><br>172.28.0.20<br><br>FFplay<br>(muestra<br>degradación)</div>"]
+        
+        %% Conexión de red
+        Sender -- "UDP/MPEG-TS" --> Receiver
+    end
+
+    %% Script de control en el Host
+    Host["💻 demo-control.sh (host)<br>(menú interactivo)"]
+
+    %% Conexión visual indicando el control desde el host
+    DockerNetwork -.- Host
+
+    %% Aplicación de clases
+    class DockerNetwork network
+    class Sender,Receiver container
+    class Host host
 ```
 
 ## Componentes
