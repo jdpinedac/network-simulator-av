@@ -48,7 +48,8 @@
       "Bash(./demo-control.sh ping:*)",
       "Bash(./demo-control.sh stream-start:*)",
       "Bash(./demo-control.sh stream-stop:*)",
-      "Bash(./demo-control.sh clear:*)"
+      "Bash(./demo-control.sh clear:*)",
+      "Bash(docker exec:*)"
     ]
   },
   "remote": {

@@ -294,9 +294,10 @@ stop_receiver_display() {
 
 show_status_bar() {
     local color
-    if [ "$CURRENT_DELAY" -eq 0 ] && [ "$CURRENT_LOSS" -eq 0 ] && [ "$CURRENT_CORRUPT" -eq 0 ]; then
+    # Comparaciones flotantes para soportar valores decimales (ej: 0.3% loss)
+    if awk "BEGIN { exit !($CURRENT_DELAY == 0 && $CURRENT_LOSS == 0 && $CURRENT_CORRUPT == 0) }"; then
         color="${GREEN}"
-    elif [ "$CURRENT_LOSS" -ge 20 ] || [ "$CURRENT_DELAY" -ge 200 ]; then
+    elif awk "BEGIN { exit !($CURRENT_LOSS >= 20 || $CURRENT_DELAY >= 200) }"; then
         color="${RED}"
     else
         color="${YELLOW}"
@@ -323,17 +324,17 @@ show_menu() {
     show_status_bar | sed 's/^/  /'
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${BLUE}║${BOLD}${YELLOW}  ESCENARIOS DE RED (aplicar impairments):                    ${BLUE}${NC}║${NC}"
+    echo -e "${BLUE}║${BOLD}${YELLOW}  ESCENARIOS DE RED (degradación gradual):                    ${BLUE}${NC}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
-    echo -e "${BLUE}║${GREEN}  1.${NC} Red ideal LAN         ${WHITE}(  0ms delay |   0ms jitter | 0% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${GREEN}  2.${NC} LAN con ruido         ${WHITE}(  5ms delay |   2ms jitter | 0% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${YELLOW}  3.${NC} WAN moderada          ${WHITE}( 50ms delay |  10ms jitter | 0% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${YELLOW}  4.${NC} WAN con problemas     ${WHITE}(100ms delay |  50ms jitter | 0% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${RED}  5.${NC} Enlace saturado        ${WHITE}(200ms delay | 100ms jitter | 0% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${RED}  6.${NC} Pérdida de paquetes 5% ${WHITE}( 50ms delay |  20ms jitter | 5% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${RED}  7.${NC} Pérdida crítica 20%    ${WHITE}(100ms delay |  50ms jitter |20% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${MAGENTA}  8.${NC} Enlace satelital       ${WHITE}(600ms delay | 200ms jitter | 2% loss)${BLUE}║${NC}"
-    echo -e "${BLUE}║${MAGENTA}  9.${NC} Catastrófico           ${WHITE}(300ms delay | 300ms jitter |50% loss)${BLUE}║${NC}"
+    echo -e "${BLUE}║${GREEN}  1.${NC} Red ideal LAN         ${WHITE}(  0ms  |   0ms  | 0%    | ~100% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${GREEN}  2.${NC} LAN micro-pérdidas    ${WHITE}(  2ms  |   1ms  | 0.3%  |  ~95% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${YELLOW}  3.${NC} WAN estable           ${WHITE}( 20ms  |   5ms  | 0.8%  |  ~88% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${YELLOW}  4.${NC} WAN con congestión    ${WHITE}( 40ms  |  15ms  | 1.5%  |  ~79% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${YELLOW}  5.${NC} Enlace degradado      ${WHITE}( 60ms  |  25ms  | 3%    |  ~61% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${RED}  6.${NC} Pérdida severa        ${WHITE}( 80ms  |  30ms  | 5%    |  ~44% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${RED}  7.${NC} Enlace crítico        ${WHITE}(100ms  |  40ms  | 10%   |  ~18% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${MAGENTA}  8.${NC} Colapso de red        ${WHITE}(150ms  |  60ms  | 20%   |   ~3% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${MAGENTA}  9.${NC} Catastrófico          ${WHITE}(200ms  | 100ms  | 40%   |   ~0% OK)${BLUE}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${BLUE}║${BOLD}${CYAN}  ACCIONES:                                                   ${BLUE}${NC}║${NC}"
@@ -445,49 +446,49 @@ while true; do
             ;;
         2)
             if check_containers; then
-                apply_impairment 5 2 0 0 "LAN con ruido (5ms / 2ms jitter)"
+                apply_impairment 2 1 0.3 0 "LAN micro-pérdidas (2ms / 1ms jitter / 0.3% loss)"
             fi
             sleep 2
             ;;
         3)
             if check_containers; then
-                apply_impairment 50 10 0 0 "WAN moderada (50ms / 10ms jitter)"
+                apply_impairment 20 5 0.8 0 "WAN estable (20ms / 5ms jitter / 0.8% loss)"
             fi
             sleep 2
             ;;
         4)
             if check_containers; then
-                apply_impairment 100 50 0 0 "WAN con problemas (100ms / 50ms jitter)"
+                apply_impairment 40 15 1.5 0 "WAN con congestión (40ms / 15ms jitter / 1.5% loss)"
             fi
             sleep 2
             ;;
         5)
             if check_containers; then
-                apply_impairment 200 100 0 0 "Enlace saturado (200ms / 100ms jitter)"
+                apply_impairment 60 25 3 0 "Enlace degradado (60ms / 25ms jitter / 3% loss)"
             fi
             sleep 2
             ;;
         6)
             if check_containers; then
-                apply_impairment 50 20 5 0 "Pérdida de paquetes 5% (50ms / 20ms jitter / 5% loss)"
+                apply_impairment 80 30 5 1 "Pérdida severa (80ms / 30ms jitter / 5% loss / 1% corrupt)"
             fi
             sleep 2
             ;;
         7)
             if check_containers; then
-                apply_impairment 100 50 20 0 "Pérdida crítica 20% (100ms / 50ms jitter / 20% loss)"
+                apply_impairment 100 40 10 2 "Enlace crítico (100ms / 40ms jitter / 10% loss / 2% corrupt)"
             fi
             sleep 2
             ;;
         8)
             if check_containers; then
-                apply_impairment 600 200 2 0 "Enlace satelital (600ms / 200ms jitter / 2% loss)"
+                apply_impairment 150 60 20 3 "Colapso de red (150ms / 60ms jitter / 20% loss / 3% corrupt)"
             fi
             sleep 2
             ;;
         9)
             if check_containers; then
-                apply_impairment 300 300 50 10 "CATASTROFICO (300ms / 300ms jitter / 50% loss / 10% corrupt)"
+                apply_impairment 200 100 40 5 "CATASTRÓFICO (200ms / 100ms jitter / 40% loss / 5% corrupt)"
             fi
             sleep 2
             ;;

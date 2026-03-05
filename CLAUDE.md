@@ -59,6 +59,10 @@ These are hard-won lessons from debugging; violating them breaks the demo:
 
 5. **Queue limit formula in apply-netem.sh:** `(delay_ms + jitter_ms) * 200 * 3 / 1000 + 2000`. Works for ~400 pkt/s with 3x margin. Too-small limits cause artificial drops unrelated to the configured loss%.
 
+9. **Bash integer comparisons silently fail with decimals.** `[ "0.3" -gt 0 ] 2>/dev/null` evaluates as FALSE (exit code 2 = error = falsy). `apply-netem.sh` uses `_gt()` with awk for float-safe comparisons. `demo-control.sh` uses inline awk in `show_status_bar()`. Without this fix, fractional loss values (0.3%, 0.8%, 1.5%) are silently ignored — only delay/jitter are applied, which causes no visible degradation in UDP video.
+
+10. **Packet loss is the primary visual differentiator, not delay/jitter.** For UDP video, delay and jitter alone don't cause visible artifacts (packets arrive intact; FFplay's buffer absorbs timing variation). Scenarios must include incremental packet loss to show progressive degradation. With `-g 1` (16 pkt/frame), frame damage probability = `1-(1-loss%)^16`.
+
 6. **Audio needs PulseAudio socket mounted** in docker-compose.yml (`/run/user/1000/pulse`). Without it, FFplay plays video but audio goes nowhere.
 
 7. **`fifo_size` in receive.sh must be small (~2048).** This is FFplay's UDP circular buffer in packets. At ~374 pkt/s, `fifo_size=65536` = 175 seconds of stale data — after clearing impairments, FFplay keeps showing corrupted video for minutes. With `fifo_size=2048` (~5.5s), recovery happens within seconds.

@@ -11,6 +11,9 @@ JITTER="${3:-0}"     # milisegundos
 LOSS="${4:-0}"       # porcentaje (0-100)
 CORRUPTION="${5:-0}" # porcentaje (0-100)
 
+# Comparación flotante: retorna 0 (true) si $1 > $2
+_gt() { awk "BEGIN { exit !($1 > $2) }"; }
+
 apply_netem() {
     local delay_ms="$1"
     local jitter_ms="$2"
@@ -23,32 +26,30 @@ apply_netem() {
     # Calcular límite de cola: delay alto → más paquetes en tránsito
     # ~200 pkt/s × (delay_ms + jitter_ms) / 1000 × 3 (margen) + 2000 base
     local queue_limit=2000
-    if [ "$delay_ms" -gt 100 ] 2>/dev/null; then
-        queue_limit=$(( (delay_ms + jitter_ms) * 200 * 3 / 1000 + 2000 ))
+    if _gt "$delay_ms" 100; then
+        queue_limit=$(awk "BEGIN { printf \"%d\", ($delay_ms + $jitter_ms) * 200 * 3 / 1000 + 2000 }")
     fi
 
     # Construir comando netem
     local CMD="tc qdisc add dev $IFACE root netem limit $queue_limit"
 
-    if [ "$delay_ms" -gt 0 ] 2>/dev/null; then
+    if _gt "$delay_ms" 0; then
         CMD="$CMD delay ${delay_ms}ms"
-        if [ "$jitter_ms" -gt 0 ] 2>/dev/null; then
+        if _gt "$jitter_ms" 0; then
             CMD="$CMD ${jitter_ms}ms distribution normal"
         fi
     fi
 
-    if [ "$loss_pct" -gt 0 ] 2>/dev/null; then
+    if _gt "$loss_pct" 0; then
         CMD="$CMD loss ${loss_pct}%"
     fi
 
-    if [ "$corrupt_pct" -gt 0 ] 2>/dev/null; then
+    if _gt "$corrupt_pct" 0; then
         CMD="$CMD corrupt ${corrupt_pct}%"
     fi
 
     # Solo aplicar si hay algún impairment
-    if [ "$delay_ms" -gt 0 ] 2>/dev/null || \
-       [ "$loss_pct" -gt 0 ] 2>/dev/null || \
-       [ "$corrupt_pct" -gt 0 ] 2>/dev/null; then
+    if _gt "$delay_ms" 0 || _gt "$loss_pct" 0 || _gt "$corrupt_pct" 0; then
         eval "$CMD"
         echo "APPLIED: $CMD"
     else

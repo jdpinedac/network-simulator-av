@@ -71,40 +71,33 @@ docker compose up -d
 ## Guión de la Demo
 
 ### Paso 1: Red Ideal (baseline)
-- Seleccionar escenario **1** → 0ms latencia, 0ms jitter
-- El video se ve perfectamente fluido
+- Seleccionar escenario **1** → 0ms latencia, 0% pérdida
+- El video se ve perfectamente fluido, 100% de frames limpios
 - El tono de audio es continuo
 
-### Paso 2: Introducir Jitter Moderado
-- Seleccionar escenario **3** → 50ms delay, 10ms jitter
-- *Concepto: WAN geográfica normal*
-- El video puede mostrar pequeñas vacilaciones
-- El audio tiene leves interrupciones
+### Paso 2: Degradación gradual (recorrer niveles 2→5)
+- **2** → 0.3% loss: glitch raro (~1/s), casi imperceptible
+- **3** → 0.8% loss: macroblocks ocasionales (~3/s)
+- **4** → 1.5% loss: artefactos frecuentes (~5/s), ~1 de cada 5 frames afectado
+- **5** → 3% loss: degradación clara, ~40% de frames con artefactos
+- *Concepto: así se degrada la señal progresivamente sin QoS*
 
-### Paso 3: Jitter Severo
-- Seleccionar escenario **4** → 100ms delay, 50ms jitter
-- *Concepto: Red congestionada*
-- Congelamiento visible de frames
-- Audio entrecortado claramente
+### Paso 3: Pérdida severa (niveles 6-7)
+- **6** → 5% loss + 1% corrupción: mayoría de frames dañados + distorsión de color
+- **7** → 10% loss + 2% corrupción: artefactos constantes, casi impresentable
+- *Concepto: WiFi con interferencia, enlace saturado*
 
-### Paso 4: Pérdida de Paquetes
-- Seleccionar escenario **6** → 5% loss
-- *Concepto: Interferencia o saturación del enlace*
-- Bloques pixelados (macroblocks) en el video
-- Audio con "clicks" y silencios
-
-### Paso 5: Escenario Catastrófico
-- Seleccionar escenario **9** → 200ms/200ms jitter/30% loss
+### Paso 4: Colapso total (niveles 8-9)
+- **8** → 20% loss: el stream se desintegra (~3% de frames limpios)
+- **9** → 40% loss + 5% corrupción: destrucción total
 - *Concepto: Lo que pasa sin QoS ni VLAN segregada*
-- Video prácticamente inutilizable
-- Audio irreconocible
 
-### Paso 6: Recuperación
+### Paso 5: Recuperación
 - Seleccionar escenario **1** o presionar **p**
 - *Concepto: El valor del QoS y la segregación de tráfico*
-- El video vuelve a verse perfectamente
+- El video vuelve a verse perfectamente (FFplay se reinicia con buffers limpios)
 
-### Paso 7: Salida Limpia
+### Paso 6: Salida Limpia
 - Presionar **q** para salir
 - Se cierran automáticamente las ventanas de video, streams y procesos
 - Para detener los contenedores: `docker compose down`
@@ -113,17 +106,20 @@ docker compose up -d
 
 ## Escenarios Disponibles
 
-| # | Nombre | Delay | Jitter | Loss | Caso real |
-|---|---|---|---|---|---|
-| 1 | Red ideal LAN | 0ms | 0ms | 0% | Switch gestionado con QoS |
-| 2 | LAN con ruido | 5ms | 2ms | 0% | LAN sin gestión de QoS |
-| 3 | WAN moderada | 50ms | 10ms | 0% | Enlace WAN continental |
-| 4 | WAN con problemas | 100ms | 50ms | 0% | Red congestionada |
-| 5 | Enlace saturado | 200ms | 100ms | 0% | Ancho de banda agotado |
-| 6 | Pérdida 5% | 50ms | 20ms | 5% | WiFi con interferencia |
-| 7 | Pérdida crítica 20% | 100ms | 50ms | 20% | WiFi en área densa |
-| 8 | Enlace satelital | 600ms | 200ms | 2% | VSAT geoestacionario |
-| 9 | Catastrófico | 200ms | 200ms | 30% | Sin QoS, red mixta |
+Los niveles usan **pérdida de paquetes incremental** como diferenciador principal.
+Con `-g 1` (all I-frames), cada frame = ~16 paquetes UDP. Frames limpios = `(1-loss%)^16`.
+
+| # | Nombre | Delay | Jitter | Loss | Corrupt | ~Frames OK | Caso real |
+|---|---|---|---|---|---|---|---|
+| 1 | Red ideal LAN | 0ms | 0ms | 0% | 0% | 100% | Switch gestionado con QoS |
+| 2 | LAN micro-pérdidas | 2ms | 1ms | 0.3% | 0% | 95% | LAN sin gestión de QoS |
+| 3 | WAN estable | 20ms | 5ms | 0.8% | 0% | 88% | Enlace WAN continental |
+| 4 | WAN con congestión | 40ms | 15ms | 1.5% | 0% | 79% | Red con tráfico best-effort |
+| 5 | Enlace degradado | 60ms | 25ms | 3% | 0% | 61% | Ancho de banda agotado |
+| 6 | Pérdida severa | 80ms | 30ms | 5% | 1% | 44% | WiFi con interferencia |
+| 7 | Enlace crítico | 100ms | 40ms | 10% | 2% | 18% | WiFi en área densa |
+| 8 | Colapso de red | 150ms | 60ms | 20% | 3% | 3% | Red mixta sin QoS |
+| 9 | Catastrófico | 200ms | 100ms | 40% | 5% | ~0% | Fallo total de infraestructura |
 
 ---
 
