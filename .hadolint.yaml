@@ -1,0 +1,5 @@
+ignored:
+  # Pinning apt versions is impractical for a demo project
+  - DL3008
+  # --no-install-recommends can break ffmpeg/pulseaudio dependencies
+  - DL3015
