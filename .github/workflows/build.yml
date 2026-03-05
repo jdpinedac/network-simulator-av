@@ -7,9 +7,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   shellcheck:
     name: ShellCheck
@@ -18,10 +15,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: .
-          severity: warning
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck --severity=warning ./*.sh sender/*.sh receiver/*.sh
 
   hadolint:
     name: Hadolint
@@ -29,15 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Lint sender Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: sender/Dockerfile
-
-      - name: Lint receiver Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: receiver/Dockerfile
+      - name: Lint Dockerfiles
+        run: |
+          docker pull hadolint/hadolint
+          docker run --rm -v "$PWD/.hadolint.yaml:/.config/hadolint.yaml" -i hadolint/hadolint < sender/Dockerfile
+          docker run --rm -v "$PWD/.hadolint.yaml:/.config/hadolint.yaml" -i hadolint/hadolint < receiver/Dockerfile
 
   compose-validate:
     name: Compose config
@@ -58,13 +50,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build ${{ matrix.service }}
-        uses: docker/build-push-action@v6
-        with:
-          context: ./${{ matrix.service }}
-          push: false
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+        run: docker build ./${{ matrix.service }}
