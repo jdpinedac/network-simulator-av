@@ -1,6 +1,6 @@
 # Simulador de Jitter y Latencia en Video sobre IP
 
-[![CI](https://github.com/jdpinedac/network-simulator-claude/actions/workflows/ci.yml/badge.svg)](https://github.com/jdpinedac/network-simulator-claude/actions/workflows/ci.yml)
+[![CI](https://github.com/jdpinedac/network-simulator-av/actions/workflows/ci.yml/badge.svg)](https://github.com/jdpinedac/network-simulator-av/actions/workflows/ci.yml)
 
 **Conferencia:** "Hackeando la Señal: La Verdad Oculta de la Infraestructura de Video sobre IP"
 **AVIXA 2026** | Juan David Pineda-Cárdenas
@@ -153,7 +153,7 @@ Protocolos como SRT añaden recuperación sin la penalidad de TCP.
 ## Estructura de Archivos
 
 ```
-network-simulator-claude/
+network-simulator-av/
 ├── docker-compose.yml          # Orquestación de contenedores
 ├── demo-control.sh             # Control interactivo principal
 ├── setup.sh                    # Setup inicial
