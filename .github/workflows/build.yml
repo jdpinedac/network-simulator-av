@@ -12,7 +12,7 @@ jobs:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run ShellCheck
         run: |
@@ -23,7 +23,7 @@ jobs:
     name: Hadolint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Lint Dockerfiles
         run: |
@@ -35,7 +35,7 @@ jobs:
     name: Compose config
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate docker-compose.yml
         run: docker compose config --quiet
@@ -48,7 +48,7 @@ jobs:
       matrix:
         service: [sender, receiver]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build ${{ matrix.service }}
         run: docker build ./${{ matrix.service }}
