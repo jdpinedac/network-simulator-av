@@ -49,7 +49,15 @@
       "Bash(./demo-control.sh stream-start:*)",
       "Bash(./demo-control.sh stream-stop:*)",
       "Bash(./demo-control.sh clear:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(gh repo:*)",
+      "Bash(shellcheck:*)",
+      "Bash(sudo apt-get:*)",
+      "Bash(docker run:*)",
+      "Bash(docker compose:*)",
+      "Bash(gh run:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh api:*)"
     ]
   },
   "remote": {
