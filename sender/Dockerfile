@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 LABEL maintainer="Juan David Pineda-Cárdenas <juan.pineda@pyxis.tech>"
 LABEL description="Sender container: FFmpeg streamer con tc netem para simulación de red"
