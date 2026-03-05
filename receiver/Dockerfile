@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 LABEL maintainer="Juan David Pineda-Cárdenas <juan.pineda@pyxis.tech>"
 LABEL description="Receiver container: FFplay display para demo de jitter/latencia"
