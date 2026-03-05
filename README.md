@@ -1,6 +1,6 @@
 # Simulador de Jitter y Latencia en Video sobre IP
 
-[![CI](https://github.com/jdpinedac/network-simulator-av/actions/workflows/ci.yml/badge.svg)](https://github.com/jdpinedac/network-simulator-av/actions/workflows/ci.yml)
+[![Build](https://github.com/jdpinedac/network-simulator-av/actions/workflows/build.yml/badge.svg)](https://github.com/jdpinedac/network-simulator-av/actions/workflows/build.yml)
 
 **Conferencia:** "Hackeando la Señal: La Verdad Oculta de la Infraestructura de Video sobre IP"
 **AVIXA 2026** | Juan David Pineda-Cárdenas
