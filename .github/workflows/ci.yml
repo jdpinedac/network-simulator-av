@@ -30,12 +30,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Lint sender Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: sender/Dockerfile
 
       - name: Lint receiver Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: receiver/Dockerfile
 
