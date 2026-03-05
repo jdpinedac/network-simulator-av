@@ -42,7 +42,13 @@
       "Bash(docker builder prune -f)",
       "Bash(docker exec -d -e DISPLAY=\"$DISPLAY\" av_receiver /demo/receive.sh)",
       "Bash(echo EXIT: $?:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(bash:*)",
+      "Bash(./demo-control.sh status:*)",
+      "Bash(./demo-control.sh ping:*)",
+      "Bash(./demo-control.sh stream-start:*)",
+      "Bash(./demo-control.sh stream-stop:*)",
+      "Bash(./demo-control.sh clear:*)"
     ]
   },
   "remote": {

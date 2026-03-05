@@ -541,7 +541,12 @@ while true; do
             fi
             ;;
         q|Q)
-            echo -e "\n${GREEN}Saliendo del control de demo.${NC}"
+            echo -e "\n${YELLOW}Cerrando ventanas de video y limpiando...${NC}"
+            stop_receiver_display
+            # Detener stream del sender
+            docker exec "$SENDER" pkill -f stream.sh 2>/dev/null || true
+            docker exec "$SENDER" pkill -f ffmpeg    2>/dev/null || true
+            echo -e "${GREEN}Saliendo del control de demo.${NC}"
             echo -e "Para detener los contenedores: ${YELLOW}docker compose down${NC}\n"
             exit 0
             ;;

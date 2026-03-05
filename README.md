@@ -104,6 +104,11 @@ docker compose up -d
 - *Concepto: El valor del QoS y la segregación de tráfico*
 - El video vuelve a verse perfectamente
 
+### Paso 7: Salida Limpia
+- Presionar **q** para salir
+- Se cierran automáticamente las ventanas de video, streams y procesos
+- Para detener los contenedores: `docker compose down`
+
 ---
 
 ## Escenarios Disponibles

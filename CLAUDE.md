@@ -63,7 +63,7 @@ These are hard-won lessons from debugging; violating them breaks the demo:
 
 7. **`fifo_size` in receive.sh must be small (~2048).** This is FFplay's UDP circular buffer in packets. At ~374 pkt/s, `fifo_size=65536` = 175 seconds of stale data — after clearing impairments, FFplay keeps showing corrupted video for minutes. With `fifo_size=2048` (~5.5s), recovery happens within seconds.
 
-8. **FFplay must be restarted to recover from heavy corruption.** FFplay has internal packet queues of up to 15MB (~30s at 4Mbps) that cannot be flushed externally. After heavy corruption, these queues fill with corrupted data and FFplay processes them ALL before reaching clean data. The solution: `receive.sh` has a restart loop — when `demo-control.sh` clears impairments, it kills FFplay (`pkill -f ffplay`), and the loop automatically restarts it with clean buffers. This is why `stop_receiver_display()` must also kill `receive.sh` (to stop the loop).
+8. **FFplay must be restarted to recover from heavy corruption.** FFplay has internal packet queues of up to 15MB (~30s at 4Mbps) that cannot be flushed externally. After heavy corruption, these queues fill with corrupted data and FFplay processes them ALL before reaching clean data. The solution: `receive.sh` has a restart loop — when `demo-control.sh` clears impairments, it kills FFplay (`pkill -f ffplay`), and the loop automatically restarts it with clean buffers. This is why `stop_receiver_display()` must also kill `receive.sh` (to stop the loop). The quit handler (`q/Q`) calls `stop_receiver_display()` and also kills sender processes (`stream.sh` + `ffmpeg`) to ensure no orphaned processes remain.
 
 ## Key Environment Variables (sender)
 
