@@ -57,7 +57,8 @@
       "Bash(docker compose:*)",
       "Bash(gh run:*)",
       "Bash(gh workflow:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh auth:*)"
     ]
   },
   "remote": {
