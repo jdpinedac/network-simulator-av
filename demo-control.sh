@@ -433,7 +433,8 @@ fi
 
 while true; do
     show_menu
-    read -r choice
+    read -e -r choice
+    [[ -n "$choice" ]] && history -s "$choice"
 
     case "$choice" in
         1)

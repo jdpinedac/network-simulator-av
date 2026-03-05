@@ -40,7 +40,12 @@
       "Bash(awk 'BEGIN{start=systime\\(\\); prev=-1; count=0} {t=systime\\(\\)-start; if\\(t!=prev && prev>=0\\) {print prev\"\"s: \"\"count\"\" errors\"\"; count=0} count++; prev=t} END{if\\(count>0\\) print prev\"\"s: \"\"count\"\" errors\"\"}')",
       "Bash(__NEW_LINE_117f867958404429__ wait)",
       "Bash(docker builder prune -f)",
-      "Bash(docker exec -d -e DISPLAY=\"$DISPLAY\" av_receiver /demo/receive.sh)"
+      "Bash(docker exec -d -e DISPLAY=\"$DISPLAY\" av_receiver /demo/receive.sh)",
+      "Bash(echo EXIT: $?:*)",
+      "Bash(git:*)"
     ]
+  },
+  "remote": {
+    "defaultEnvironmentId": "env_01TnwZMD5W6xSdzpw2NWj73u"
   }
 }
