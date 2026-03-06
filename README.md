@@ -94,10 +94,16 @@ docker compose up -d
 - **9** → 40% loss + 5% corrupción: destrucción total
 - *Concepto: Lo que pasa sin QoS ni VLAN segregada*
 
-### Paso 5: Recuperación
+### Paso 5: Medir el impacto (iperf3)
+- Presionar **n** para ejecutar una prueba iperf3 UDP a 4 Mbps
+- Muestra ancho de banda real, jitter y pérdida de paquetes bajo las reglas netem activas
+- *Concepto: Cuantificar el daño que causan los impairments*
+
+### Paso 6: Recuperación
 - Seleccionar escenario **1** o presionar **p**
 - *Concepto: El valor del QoS y la segregación de tráfico*
 - El video vuelve a verse perfectamente (FFplay se reinicia con buffers limpios)
+- También se puede bajar directamente de nivel (ej: 9→2) — FFplay se reinicia automáticamente para vaciar las colas internas corruptas
 
 ### Paso 6: Salida Limpia
 - Presionar **q** para salir
@@ -159,11 +165,11 @@ network-simulator-av/
 ├── setup.sh                    # Setup inicial
 ├── README.md                   # Este archivo
 ├── sender/
-│   ├── Dockerfile              # Ubuntu 22.04 + FFmpeg + iproute2
+│   ├── Dockerfile              # Ubuntu 22.04 + FFmpeg + iproute2 + iperf3
 │   ├── stream.sh               # Generador de stream (FFmpeg)
 │   └── apply-netem.sh          # Aplicar/quitar impairments (tc netem)
 └── receiver/
-    ├── Dockerfile              # Ubuntu 22.04 + FFmpeg
+    ├── Dockerfile              # Ubuntu 22.04 + FFmpeg + iperf3
     ├── receive.sh              # Display del stream (FFplay + X11)
     └── receive-stats.sh        # Modo estadísticas (sin display gráfico)
 ```

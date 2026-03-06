@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     fonts-dejavu-extra \
     bc \
     curl \
+    iperf3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /demo

@@ -114,6 +114,20 @@ ping_test() {
     echo ""
 }
 
+iperf3_test() {
+    echo -e "\n${CYAN}=== iperf3: Ancho de banda y calidad de red ===${NC}"
+    echo -e "${YELLOW}Iniciando servidor iperf3 en receiver...${NC}"
+    docker exec "$RECEIVER" pkill -f iperf3 2>/dev/null || true
+    docker exec -d "$RECEIVER" iperf3 -s
+    sleep 1
+
+    echo -e "${YELLOW}Ejecutando prueba UDP a 4 Mbps (simula el stream de video)...${NC}\n"
+    docker exec "$SENDER" iperf3 -c 172.28.0.20 -u -b 4M -t 5 --forceflush 2>&1
+
+    docker exec "$RECEIVER" pkill -f iperf3 2>/dev/null || true
+    echo ""
+}
+
 start_streaming() {
     echo -e "\n${YELLOW}Iniciando streaming desde sender...${NC}"
 
@@ -356,6 +370,7 @@ show_menu() {
     echo -e "${BLUE}║${CYAN}  p.${NC} Limpiar todos los impairments (red limpia)               ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  t.${NC} Ver estado tc netem actual                               ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  i.${NC} Ping: medir latencia real entre contenedores             ${BLUE}║${NC}"
+    echo -e "${BLUE}║${CYAN}  n.${NC} iperf3: medir ancho de banda y pérdida UDP real          ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  c.${NC} Ingresar impairment personalizado                        ${BLUE}║${NC}"
     echo -e "${BLUE}║${CYAN}  q.${NC} Salir                                                    ${BLUE}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
@@ -541,6 +556,13 @@ while true; do
         i|I)
             if check_containers; then
                 ping_test
+                echo -ne "${YELLOW}Presiona Enter para continuar...${NC}"
+                read -r
+            fi
+            ;;
+        n|N)
+            if check_containers; then
+                iperf3_test
                 echo -ne "${YELLOW}Presiona Enter para continuar...${NC}"
                 read -r
             fi

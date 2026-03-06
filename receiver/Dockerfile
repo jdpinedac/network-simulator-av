@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     tcpdump \
     iproute2 \
+    iperf3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /demo
