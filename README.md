@@ -78,8 +78,8 @@ docker compose up -d
 - El tono de audio es continuo
 
 ### Paso 2: Degradación gradual (recorrer niveles 2→5)
-- **2** → 0.1% loss: glitch raro (cada ~2.5s), genuinamente sutil
-- **3** → 0.5% loss: artefactos ocasionales (~2/s)
+- **2** → 0.05% loss: glitch raro (cada ~5s), genuinamente sutil
+- **3** → 0.2% loss: artefactos ocasionales (~1/s)
 - **4** → 1.5% loss: artefactos frecuentes (~5/s), ~1 de cada 5 frames afectado
 - **5** → 3% loss: degradación clara, ~40% de frames con artefactos
 - *Concepto: así se degrada la señal progresivamente sin QoS*
@@ -114,8 +114,8 @@ Con `-g 1` (all I-frames), cada frame = ~16 paquetes UDP. Frames limpios = `(1-l
 | # | Nombre | Delay | Jitter | Loss | Corrupt | ~Frames OK | Caso real |
 |---|---|---|---|---|---|---|---|
 | 1 | Red ideal LAN | 0ms | 0ms | 0% | 0% | 100% | Switch gestionado con QoS |
-| 2 | LAN micro-pérdidas | 2ms | 1ms | 0.1% | 0% | 98% | LAN sin gestión de QoS |
-| 3 | WAN estable | 20ms | 5ms | 0.5% | 0% | 92% | Enlace WAN continental |
+| 2 | LAN micro-pérdidas | 2ms | 1ms | 0.05% | 0% | 99% | LAN sin gestión de QoS |
+| 3 | WAN estable | 20ms | 5ms | 0.2% | 0% | 97% | Enlace WAN continental |
 | 4 | WAN con congestión | 40ms | 15ms | 1.5% | 0% | 79% | Red con tráfico best-effort |
 | 5 | Enlace degradado | 60ms | 25ms | 3% | 0% | 61% | Ancho de banda agotado |
 | 6 | Pérdida severa | 80ms | 30ms | 5% | 1% | 44% | WiFi con interferencia |

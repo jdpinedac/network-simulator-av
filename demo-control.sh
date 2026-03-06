@@ -294,7 +294,7 @@ stop_receiver_display() {
 
 show_status_bar() {
     local color
-    # Comparaciones flotantes para soportar valores decimales (ej: 0.1% loss)
+    # Comparaciones flotantes para soportar valores decimales (ej: 0.05% loss)
     if awk "BEGIN { exit !($CURRENT_DELAY == 0 && $CURRENT_LOSS == 0 && $CURRENT_CORRUPT == 0) }"; then
         color="${GREEN}"
     elif awk "BEGIN { exit !($CURRENT_LOSS >= 20 || $CURRENT_DELAY >= 200) }"; then
@@ -327,8 +327,8 @@ show_menu() {
     echo -e "${BLUE}║${BOLD}${YELLOW}  ESCENARIOS DE RED (degradación gradual):                    ${BLUE}${NC}║${NC}"
     echo -e "${BLUE}║${NC}                                                              ${BLUE}║${NC}"
     echo -e "${BLUE}║${GREEN}  1.${NC} Red ideal LAN         ${WHITE}(  0ms  |   0ms  | 0%    | ~100% OK)${BLUE}║${NC}"
-    echo -e "${BLUE}║${GREEN}  2.${NC} LAN micro-pérdidas    ${WHITE}(  2ms  |   1ms  | 0.1%  |  ~98% OK)${BLUE}║${NC}"
-    echo -e "${BLUE}║${YELLOW}  3.${NC} WAN estable           ${WHITE}( 20ms  |   5ms  | 0.5%  |  ~92% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${GREEN}  2.${NC} LAN micro-pérdidas    ${WHITE}(  2ms  |   1ms  | 0.05% |  ~99% OK)${BLUE}║${NC}"
+    echo -e "${BLUE}║${YELLOW}  3.${NC} WAN estable           ${WHITE}( 20ms  |   5ms  | 0.2%  |  ~97% OK)${BLUE}║${NC}"
     echo -e "${BLUE}║${YELLOW}  4.${NC} WAN con congestión    ${WHITE}( 40ms  |  15ms  | 1.5%  |  ~79% OK)${BLUE}║${NC}"
     echo -e "${BLUE}║${YELLOW}  5.${NC} Enlace degradado      ${WHITE}( 60ms  |  25ms  | 3%    |  ~61% OK)${BLUE}║${NC}"
     echo -e "${BLUE}║${RED}  6.${NC} Pérdida severa        ${WHITE}( 80ms  |  30ms  | 5%    |  ~44% OK)${BLUE}║${NC}"
@@ -446,13 +446,13 @@ while true; do
             ;;
         2)
             if check_containers; then
-                apply_impairment 2 1 0.1 0 "LAN micro-pérdidas (2ms / 1ms jitter / 0.1% loss)"
+                apply_impairment 2 1 0.05 0 "LAN micro-pérdidas (2ms / 1ms jitter / 0.05% loss)"
             fi
             sleep 2
             ;;
         3)
             if check_containers; then
-                apply_impairment 20 5 0.5 0 "WAN estable (20ms / 5ms jitter / 0.5% loss)"
+                apply_impairment 20 5 0.2 0 "WAN estable (20ms / 5ms jitter / 0.2% loss)"
             fi
             sleep 2
             ;;
