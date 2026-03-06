@@ -65,6 +65,15 @@ apply_impairment() {
 
     docker exec "$SENDER" /demo/apply-netem.sh apply "$delay" "$jitter" "$loss" "$corrupt" 2>&1
 
+    # Si el nivel de pérdida/corrupción baja, reiniciar FFplay para vaciar
+    # colas internas del decodificador (hasta 15MB / ~30s de datos corruptos).
+    # Se hace DESPUÉS de aplicar netem para que FFplay reinicie con red limpia.
+    if awk "BEGIN { exit !($CURRENT_LOSS > $loss || $CURRENT_CORRUPT > $corrupt) }"; then
+        docker exec "$RECEIVER" pkill -f ffplay 2>/dev/null || true
+        sleep 0.5
+        echo -e "${CYAN}↻ Video reiniciado (vaciando buffer del nivel anterior)${NC}"
+    fi
+
     CURRENT_DELAY=$delay
     CURRENT_JITTER=$jitter
     CURRENT_LOSS=$loss
