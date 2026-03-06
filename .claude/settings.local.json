@@ -58,7 +58,12 @@
       "Bash(gh run:*)",
       "Bash(gh workflow:*)",
       "Bash(gh api:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(echo === Checking action versions ===:*)",
+      "Bash(gh pr:*)",
+      "Bash(curl:*)",
+      "Bash(seq 1:*)",
+      "Bash(/cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/.github/workflows/build.yml:*)"
     ]
   },
   "remote": {
