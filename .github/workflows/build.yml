@@ -6,30 +6,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  shellcheck:
+  a:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "shellcheck"
+      - run: echo "a"
 
-  hadolint:
+  b:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "hadolint"
+      - run: echo "b"
 
-  compose:
+  c:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "compose"
+      - run: echo "c"
 
-  build:
+  d:
     runs-on: ubuntu-latest
-    needs: [hadolint, compose]
-    strategy:
-      matrix:
-        service: [sender, receiver]
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "build ${{ matrix.service }}"
+      - run: echo "d"
