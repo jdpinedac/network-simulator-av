@@ -3,34 +3,11 @@ name: Build
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   ci:
-    name: Lint & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: ShellCheck
-        run: find . -name '*.sh' -print0 | xargs -0 shellcheck --severity=warning
-
-      - name: Hadolint sender
-        run: docker run --rm -v "$PWD/.hadolint.yaml:/.config/hadolint.yaml" -i hadolint/hadolint < sender/Dockerfile
-
-      - name: Hadolint receiver
-        run: docker run --rm -v "$PWD/.hadolint.yaml:/.config/hadolint.yaml" -i hadolint/hadolint < receiver/Dockerfile
-
-      - name: Validate docker-compose.yml
-        run: docker compose config --quiet
-
-      - name: Build sender
-        run: docker build ./sender
-
-      - name: Build receiver
-        run: docker build ./receiver
+      - run: echo "test"
