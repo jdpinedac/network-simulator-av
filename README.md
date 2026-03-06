@@ -5,6 +5,8 @@
 **Conferencia:** "Hackeando la Señal: La Verdad Oculta de la Infraestructura de Video sobre IP"
 **AVIXA 2026** | Juan Pineda
 
+> **Disclaimer:** El autor no es ingeniero de broadcast. Este simulador es una herramienta educativa diseñada para ilustrar conceptos de degradación de red en video sobre IP durante una conferencia. Los parámetros de los escenarios (latencia, jitter, pérdida) son aproximaciones didácticas que pueden no ser óptimos en todos los casos y probablemente no reflejen siempre la realidad de una red de producción broadcast.
+
 ---
 
 ## Arquitectura
@@ -94,9 +96,11 @@ docker compose up -d
 - **9** → 40% loss + 5% corrupción: destrucción total
 - *Concepto: Lo que pasa sin QoS ni VLAN segregada*
 
-### Paso 5: Medir el impacto (iperf3)
-- Presionar **n** para ejecutar una prueba iperf3 UDP a 4 Mbps
+### Paso 5: Medir el impacto (ping + iperf3)
+- Presionar **i** para ping (configurable, default 10 pings). Muestra latencia y jitter real
+- Presionar **n** para iperf3 UDP (configurable: bandwidth default 4 Mbps, duración default 10s)
 - Muestra ancho de banda real, jitter y pérdida de paquetes bajo las reglas netem activas
+- Con impairments severos (>20% loss), iperf3 reintenta hasta 3 veces (su canal TCP de control también es afectado)
 - *Concepto: Cuantificar el daño que causan los impairments*
 
 ### Paso 6: Recuperación
@@ -105,7 +109,7 @@ docker compose up -d
 - El video vuelve a verse perfectamente (FFplay se reinicia con buffers limpios)
 - También se puede bajar directamente de nivel (ej: 9→2) — FFplay se reinicia automáticamente para vaciar las colas internas corruptas
 
-### Paso 6: Salida Limpia
+### Paso 7: Salida Limpia
 - Presionar **q** para salir
 - Se cierran automáticamente las ventanas de video, streams y procesos
 - Para detener los contenedores: `docker compose down`
@@ -210,6 +214,12 @@ docker inspect av_sender | grep -i "CapAdd"
 ```bash
 # Verificar conectividad
 docker exec av_sender ping -c 3 172.28.0.20
+
+# Medir ancho de banda y pérdida UDP real (iperf3)
+# Desde el menú interactivo: opción 'n'
+# O manualmente:
+docker exec -d av_receiver iperf3 -s
+docker exec av_sender iperf3 -c 172.28.0.20 -u -b 4M -t 5
 
 # Ver estadísticas de red
 docker exec av_sender tc qdisc show dev eth0

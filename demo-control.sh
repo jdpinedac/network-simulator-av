@@ -110,20 +110,52 @@ show_netem_status() {
 
 ping_test() {
     echo -e "\n${CYAN}=== Ping desde sender a receiver ===${NC}"
-    docker exec "$SENDER" ping -c 5 172.28.0.20 2>&1
+    echo -ne "  Cantidad de pings [10]: "
+    read -r ping_count
+    ping_count="${ping_count:-10}"
+    echo ""
+    docker exec "$SENDER" ping -c "$ping_count" 172.28.0.20 2>&1
     echo ""
 }
 
 iperf3_test() {
     echo -e "\n${CYAN}=== iperf3: Ancho de banda y calidad de red ===${NC}"
-    echo -e "${YELLOW}Iniciando servidor iperf3 en receiver...${NC}"
-    docker exec "$RECEIVER" pkill -f iperf3 2>/dev/null || true
-    docker exec -d "$RECEIVER" iperf3 -s
-    sleep 1
 
-    echo -e "${YELLOW}Ejecutando prueba UDP a 4 Mbps (simula el stream de video)...${NC}\n"
-    docker exec "$SENDER" iperf3 -c 172.28.0.20 -u -b 4M -t 5 --forceflush 2>&1
+    # El default (4M) coincide con VIDEO_BITRATE del stream FFmpeg.
+    # El usuario puede cambiarlo para simular otros escenarios de tráfico.
+    echo -e "  ${WHITE}Ancho de banda del stream actual: 4 Mbps (VIDEO_BITRATE)${NC}"
+    echo -ne "  Ancho de banda a simular en Mbps [4]: "
+    read -r bw_input
+    bw_input="${bw_input:-4}"
 
+    echo -ne "  Duración en segundos [10]: "
+    read -r duration
+    duration="${duration:-10}"
+
+    echo -e "\n${YELLOW}Ejecutando prueba UDP a ${bw_input} Mbps durante ${duration} segundos...${NC}\n"
+
+    # iperf3 usa TCP para su canal de control. Con impairments severos
+    # (>20% loss), el TCP puede fallar. Se reintenta hasta 3 veces.
+    local attempt
+    for attempt in 1 2 3; do
+        docker exec "$RECEIVER" pkill -f iperf3 2>/dev/null || true
+        docker exec "$SENDER" pkill -f iperf3 2>/dev/null || true
+        sleep 1
+        docker exec -d "$RECEIVER" iperf3 -s -1
+        sleep 2
+
+        if docker exec "$SENDER" iperf3 -c 172.28.0.20 -u -b "${bw_input}M" -t "$duration" --forceflush 2>&1; then
+            echo ""
+            return 0
+        fi
+
+        if [ "$attempt" -lt 3 ]; then
+            echo -e "${YELLOW}  Reintentando (${attempt}/3)... el canal TCP de control fue afectado por los impairments${NC}"
+        fi
+    done
+
+    echo -e "\n${RED}  La red está demasiado degradada para establecer el canal de control TCP de iperf3.${NC}"
+    echo -e "${RED}  Esto confirma que la pérdida de paquetes actual es severa.${NC}"
     docker exec "$RECEIVER" pkill -f iperf3 2>/dev/null || true
     echo ""
 }

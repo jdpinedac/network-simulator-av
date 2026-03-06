@@ -80,7 +80,7 @@ These are hard-won lessons from debugging; violating them breaks the demo:
 
 ## Network Diagnostics
 
-Both containers include `iperf3`. The `n` option in `demo-control.sh` runs a UDP test at 4 Mbps (matching the video stream bitrate) to measure real bandwidth, jitter, and packet loss under current netem rules. The receiver runs the iperf3 server, the sender runs the client.
+Both containers include `iperf3`. The `n` option in `demo-control.sh` runs a UDP test to measure real bandwidth, jitter, and packet loss under current netem rules. Parameters are configurable at runtime: bandwidth (default 4 Mbps, matching `VIDEO_BITRATE`), duration (default 10s). Ping count (`i` option) is also configurable (default 10). The receiver runs the iperf3 server (`-s -1`, one-off mode), the sender runs the client. iperf3 uses TCP for its control channel, which is also affected by netem — with severe impairments (>20% loss), the function retries up to 3 times before reporting the network is too degraded.
 
 ## Conventions
 
