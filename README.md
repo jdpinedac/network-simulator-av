@@ -5,7 +5,12 @@
 **Conferencia:** "Hackeando la Señal: La Verdad Oculta de la Infraestructura de Video sobre IP"
 **AVIXA 2026** | Juan Pineda
 
-> **Disclaimer:** El autor no es ingeniero de broadcast. Este simulador es una herramienta educativa diseñada para ilustrar conceptos de degradación de red en video sobre IP durante una conferencia. Los parámetros de los escenarios (latencia, jitter, pérdida) son aproximaciones didácticas que pueden no ser óptimos en todos los casos y probablemente no reflejen siempre la realidad de una red de producción broadcast.
+> **Disclaimer:** Este simulador es una herramienta estrictamente educativa diseñada para ilustrar
+> conceptos de degradación de red en entornos de Video sobre IP. El autor no posee formación en
+> ingeniería de broadcast. En consecuencia, los parámetros de los escenarios (latencia, jitter y
+> pérdida de paquetes) se presentan como aproximaciones didácticas. Estos valores pueden no ser
+> óptimos para todos los casos de uso y no pretenden representar fielmente el comportamiento de una
+> red de producción broadcast profesional o de misión crítica.
 
 ---
 
@@ -120,6 +125,8 @@ docker compose up -d
 
 Los niveles usan **pérdida de paquetes incremental** como diferenciador principal.
 Con `-g 1` (all I-frames), cada frame = ~16 paquetes UDP. Frames limpios = `(1-loss%)^16`.
+
+> **Nota:** Los porcentajes de "~Frames OK" aplican a SMPTE bars con `-g 1` (all I-frames). En modo archivo (GOP=30), la degradación es más visible porque los errores se propagan entre frames dependientes (P-frames) hasta el siguiente I-frame.
 
 | # | Nombre | Delay | Jitter | Loss | Corrupt | ~Frames OK | Caso real |
 |---|---|---|---|---|---|---|---|

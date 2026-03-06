@@ -59,6 +59,8 @@ These are hard-won lessons from debugging; violating them breaks the demo:
 
 5. **Queue limit formula in apply-netem.sh:** `(delay_ms + jitter_ms) * 200 * 3 / 1000 + 2000`. Works for ~400 pkt/s with 3x margin. Too-small limits cause artificial drops unrelated to the configured loss%.
 
+11. **`tc qdisc replace` is required for level transitions.** The original `del + add` pattern left a gap where queued packets (already delayed/corrupted by the old rule) were released in a burst, and new packets passed unimpaired. This made the previous impairment level appear to linger during transitions. `replace` atomically updates the qdisc parameters without deleting it. `del` is only used when clearing all impairments (all values = 0).
+
 9. **Bash integer comparisons silently fail with decimals.** `[ "0.3" -gt 0 ] 2>/dev/null` evaluates as FALSE (exit code 2 = error = falsy). `apply-netem.sh` uses `_gt()` with awk for float-safe comparisons. `demo-control.sh` uses inline awk in `show_status_bar()`. Without this fix, fractional loss values (0.3%, 0.8%, 1.5%) are silently ignored — only delay/jitter are applied, which causes no visible degradation in UDP video.
 
 10. **Packet loss is the primary visual differentiator, not delay/jitter.** For UDP video, delay and jitter alone don't cause visible artifacts (packets arrive intact; FFplay's buffer absorbs timing variation). Scenarios must include incremental packet loss to show progressive degradation. With `-g 1` (16 pkt/frame), frame damage probability = `1-(1-loss%)^16`.
@@ -76,7 +78,7 @@ These are hard-won lessons from debugging; violating them breaks the demo:
 | `AUDIO_MODE` | `tone` | `tone` (1kHz fixed, standard test signal) or `sweep` (chirp 300-1000Hz, very audible degradation) |
 | `INPUT_VIDEO` | empty | Path to video file inside container (e.g., `/videos/clip.mp4`) |
 | `VIDEO_BITRATE` | `4000k` | Target bitrate (VBV CBR enforced with `-maxrate` + `-bufsize`) |
-| `GOP` | `60` | Keyframe interval for file mode only; SMPTE always uses `-g 1` |
+| `GOP` | `30` | Keyframe interval for file mode only; SMPTE always uses `-g 1` |
 
 ## Network Diagnostics
 

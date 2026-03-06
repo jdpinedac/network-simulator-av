@@ -20,9 +20,6 @@ apply_netem() {
     local loss_pct="$3"
     local corrupt_pct="$4"
 
-    # Eliminar regla existente (ignorar error si no existe)
-    tc qdisc del dev "$IFACE" root 2>/dev/null || true
-
     # Calcular límite de cola: delay alto → más paquetes en tránsito
     # ~200 pkt/s × (delay_ms + jitter_ms) / 1000 × 3 (margen) + 2000 base
     local queue_limit=2000
@@ -30,8 +27,10 @@ apply_netem() {
         queue_limit=$(awk "BEGIN { printf \"%d\", ($delay_ms + $jitter_ms) * 200 * 3 / 1000 + 2000 }")
     fi
 
-    # Construir comando netem
-    local CMD="tc qdisc add dev $IFACE root netem limit $queue_limit"
+    # replace: actualiza atómicamente la qdisc existente (o la crea si no existe).
+    # Evita el gap del patrón del+add donde paquetes encolados se liberan de golpe
+    # y paquetes nuevos pasan sin impairment durante la transición.
+    local CMD="tc qdisc replace dev $IFACE root netem limit $queue_limit"
 
     if _gt "$delay_ms" 0; then
         CMD="$CMD delay ${delay_ms}ms"
@@ -53,6 +52,7 @@ apply_netem() {
         eval "$CMD"
         echo "APPLIED: $CMD"
     else
+        tc qdisc del dev "$IFACE" root 2>/dev/null || true
         echo "CLEAR: Sin impairments (red limpia)"
     fi
 }

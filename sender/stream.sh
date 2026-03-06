@@ -32,7 +32,7 @@ AUDIO_MODE="${AUDIO_MODE:-tone}"
 # GOP para video real: keyframes cada N frames.
 # Mayor valor = artefactos más prolongados con video real.
 # SMPTE siempre usa -g 1 (all I-frames) para máxima visibilidad.
-GOP="${GOP:-60}"
+GOP="${GOP:-30}"
 
 # Fuente de video alternativa (opcional):
 # Si INPUT_VIDEO apunta a un archivo de video, se usa en lugar de SMPTE.

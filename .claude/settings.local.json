@@ -63,7 +63,8 @@
       "Bash(gh pr:*)",
       "Bash(curl:*)",
       "Bash(seq 1:*)",
-      "Bash(/cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/.github/workflows/build.yml:*)"
+      "Bash(/cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/.github/workflows/build.yml:*)",
+      "Bash(IFS= read:*)"
     ]
   },
   "remote": {
