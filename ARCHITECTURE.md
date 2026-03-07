@@ -1,6 +1,6 @@
-# CLAUDE.md
+# ARCHITECTURE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides technical guidance and architectural context for developers and AI assistants working with code in this repository.
 
 ## Project Overview
 
