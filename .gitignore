@@ -60,4 +60,4 @@ $RECYCLE.BIN/
 # -----------------------------------------------------------
 # Claude Code (configuración local del usuario)
 # -----------------------------------------------------------
-.claude/settings.local.json
+.claude/
