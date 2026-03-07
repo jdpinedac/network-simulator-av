@@ -411,7 +411,6 @@ show_menu() {
     echo -e "${BLUE}║${NC}                                                                        ${BLUE}║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -ne "${WHITE}Selecciona una opción: ${NC}"
 }
 
 custom_impairment() {
@@ -493,7 +492,12 @@ fi
 
 while true; do
     show_menu
-    read -e -r choice
+    
+    # Marcadores \001 y \002 le indican a readline que los colores no ocupan espacio
+    PROMPT_WHITE=$'\001\033[1;37m\002'
+    PROMPT_NC=$'\001\033[0m\002'
+    read -e -p "${PROMPT_WHITE}Selecciona una opción: ${PROMPT_NC}" -r choice
+    
     [[ -n "$choice" ]] && history -s "$choice"
 
     case "$choice" in
