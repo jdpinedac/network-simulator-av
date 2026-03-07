@@ -64,7 +64,17 @@
       "Bash(curl:*)",
       "Bash(seq 1:*)",
       "Bash(/cold-storage/Dropbox/AVIXA/confs/2026/ClaudeCode/network-simulator-claude/.github/workflows/build.yml:*)",
-      "Bash(IFS= read:*)"
+      "Bash(IFS= read:*)",
+      "Bash(docker:*)",
+      "Bash(grep:*)",
+      "Bash(grep nal_unit_type: [59]:*)",
+      "Bash(grep nal_unit_type: 9:*)",
+      "Bash(grep \"\"type\"\":\"\"result\"\":*)",
+      "Bash(__NEW_LINE_6896359a2cbc87d8__ echo \"=== Test B: Level 2 → Level 6 \\(5% loss, 1% corrupt\\) ===\")",
+      "Bash(__NEW_LINE_6a0d534b400da5fd__ echo \"=== Test C: Level 6 → Level 2 \\(corrupt must NOT persist\\) ===\")",
+      "Bash(__NEW_LINE_512585f2938468f3__ echo \"=== Test D: Level 9 → Level 2 \\(40% loss + 5% corrupt → 0.05% loss\\) ===\")",
+      "Bash(__NEW_LINE_f39a57434c5b4554__ echo \"=== Test E: Level 2 → Level 1 \\(clear\\) ===\")",
+      "Bash(__NEW_LINE_168339f5e71c4f23__ echo \"=== Test F: Rapid transitions 1→5→9→2→1 ===\")"
     ]
   },
   "remote": {

@@ -59,17 +59,21 @@ These are hard-won lessons from debugging; violating them breaks the demo:
 
 5. **Queue limit formula in apply-netem.sh:** `(delay_ms + jitter_ms) * 200 * 3 / 1000 + 2000`. Works for ~400 pkt/s with 3x margin. Too-small limits cause artificial drops unrelated to the configured loss%.
 
-11. **`tc qdisc replace` is required for level transitions.** The original `del + add` pattern left a gap where queued packets (already delayed/corrupted by the old rule) were released in a burst, and new packets passed unimpaired. This made the previous impairment level appear to linger during transitions. `replace` atomically updates the qdisc parameters without deleting it. `del` is only used when clearing all impairments (all values = 0).
-
-9. **Bash integer comparisons silently fail with decimals.** `[ "0.3" -gt 0 ] 2>/dev/null` evaluates as FALSE (exit code 2 = error = falsy). `apply-netem.sh` uses `_gt()` with awk for float-safe comparisons. `demo-control.sh` uses inline awk in `show_status_bar()`. Without this fix, fractional loss values (0.3%, 0.8%, 1.5%) are silently ignored — only delay/jitter are applied, which causes no visible degradation in UDP video.
-
-10. **Packet loss is the primary visual differentiator, not delay/jitter.** For UDP video, delay and jitter alone don't cause visible artifacts (packets arrive intact; FFplay's buffer absorbs timing variation). Scenarios must include incremental packet loss to show progressive degradation. With `-g 1` (16 pkt/frame), frame damage probability = `1-(1-loss%)^16`.
-
 6. **Audio needs PulseAudio socket mounted** in docker-compose.yml (`/run/user/1000/pulse`). Without it, FFplay plays video but audio goes nowhere.
 
 7. **`fifo_size` in receive.sh must be small (~2048).** This is FFplay's UDP circular buffer in packets. At ~374 pkt/s, `fifo_size=65536` = 175 seconds of stale data — after clearing impairments, FFplay keeps showing corrupted video for minutes. With `fifo_size=2048` (~5.5s), recovery happens within seconds.
 
 8. **FFplay must be restarted to recover from heavy corruption.** FFplay has internal packet queues of up to 15MB (~30s at 4Mbps) that cannot be flushed externally. After heavy corruption, these queues fill with corrupted data and FFplay processes them ALL before reaching clean data. The solution: `receive.sh` has a restart loop — when `demo-control.sh` clears impairments, it kills FFplay (`pkill -f ffplay`), and the loop automatically restarts it with clean buffers. This is why `stop_receiver_display()` must also kill `receive.sh` (to stop the loop). The quit handler (`q/Q`) calls `stop_receiver_display()` and also kills sender processes (`stream.sh` + `ffmpeg`) to ensure no orphaned processes remain. Additionally, `apply_impairment()` restarts FFplay when loss or corruption **decreases** (e.g., level 9→2) — same queue problem applies when downgrading, not just when clearing.
+
+9. **Bash integer comparisons silently fail with decimals.** `[ "0.3" -gt 0 ] 2>/dev/null` evaluates as FALSE (exit code 2 = error = falsy). `apply-netem.sh` uses `_gt()` with awk for float-safe comparisons. `demo-control.sh` uses inline awk in `show_status_bar()`. Without this fix, fractional loss values (0.3%, 0.8%, 1.5%) are silently ignored — only delay/jitter are applied, which causes no visible degradation in UDP video.
+
+10. **Packet loss is the primary visual differentiator, not delay/jitter.** For UDP video, delay and jitter alone don't cause visible artifacts (packets arrive intact; FFplay's buffer absorbs timing variation). Scenarios must include incremental packet loss to show progressive degradation. With `-g 1` (16 pkt/frame), frame damage probability = `1-(1-loss%)^16`.
+
+11. **`tc qdisc replace` requires ALL parameters explicitly.** `replace` atomically updates the qdisc (no gap like `del+add`), but it does **partial updates**: unspecified parameters retain values from the previous qdisc. Example: after `loss 40% corrupt 5%`, running `replace ... loss 0.05%` (without `corrupt`) results in `loss 0.05% corrupt 5%` — corruption persists! Fix: `apply-netem.sh` ALWAYS includes `loss ${loss_pct}% corrupt ${corrupt_pct}%` in the command, even when values are 0%. The `del+add` fallback doesn't have this bug (creates fresh qdisc) but leaves a brief gap where packets flow unimpaired.
+
+12. **Netem jitter causes packet reordering (~3% at low delay).** Since kernel 2.6.25, netem uses a time-sorted rbtree with independent per-packet delay timers. A packet getting delay=1ms followed by one getting delay=3ms means the first arrives first — reordering. At level 2 (2ms delay, 1ms jitter), ~3% of packets are reordered. This is inherent to the kernel implementation; no option exists to prevent it. For this demo it adds realism (real networks reorder too).
+
+13. **`-tune zerolatency` creates N slices = N CPU threads automatically.** x264's sliced-threads mode (enabled by `-tune zerolatency`) creates one slice per CPU thread. On an 8-core machine → 8 slices per frame, each independently decodable. This naturally contains H.264 errors: losing a packet corrupts only the slice it belongs to (~12.5% of frame), not the entire frame. The explicit `-x264-params slices=4` is unnecessary and actually worse (fewer, larger slices = more damage per lost packet).
 
 ## Key Environment Variables (sender)
 

@@ -27,9 +27,17 @@ apply_netem() {
         queue_limit=$(awk "BEGIN { printf \"%d\", ($delay_ms + $jitter_ms) * 200 * 3 / 1000 + 2000 }")
     fi
 
+    # Si no hay ningún impairment, limpiar y salir
+    if ! _gt "$delay_ms" 0 && ! _gt "$loss_pct" 0 && ! _gt "$corrupt_pct" 0; then
+        tc qdisc del dev "$IFACE" root 2>/dev/null || true
+        echo "CLEAR: Sin impairments (red limpia)"
+        return
+    fi
+
     # replace: actualiza atómicamente la qdisc existente (o la crea si no existe).
-    # Evita el gap del patrón del+add donde paquetes encolados se liberan de golpe
-    # y paquetes nuevos pasan sin impairment durante la transición.
+    # IMPORTANTE: SIEMPRE incluir loss% y corrupt% explícitamente (incluso 0%).
+    # replace hace update parcial: parámetros omitidos CONSERVAN su valor anterior.
+    # Sin "corrupt 0%", un corrupt 5% del nivel anterior persiste al cambiar.
     local CMD="tc qdisc replace dev $IFACE root netem limit $queue_limit"
 
     if _gt "$delay_ms" 0; then
@@ -39,21 +47,33 @@ apply_netem() {
         fi
     fi
 
-    if _gt "$loss_pct" 0; then
-        CMD="$CMD loss ${loss_pct}%"
-    fi
+    # Siempre incluir loss y corrupt para limpiar valores del nivel anterior
+    CMD="$CMD loss ${loss_pct}% corrupt ${corrupt_pct}%"
 
-    if _gt "$corrupt_pct" 0; then
-        CMD="$CMD corrupt ${corrupt_pct}%"
-    fi
-
-    # Solo aplicar si hay algún impairment
-    if _gt "$delay_ms" 0 || _gt "$loss_pct" 0 || _gt "$corrupt_pct" 0; then
-        eval "$CMD"
+    # Aplicar con replace. Si falla, intentar del+add como fallback.
+    local tc_output
+    if tc_output=$(eval "$CMD" 2>&1); then
         echo "APPLIED: $CMD"
     else
+        echo "WARN: replace falló ($tc_output), intentando del+add..."
         tc qdisc del dev "$IFACE" root 2>/dev/null || true
-        echo "CLEAR: Sin impairments (red limpia)"
+        local CMD_ADD="${CMD/replace/add}"
+        if tc_output=$(eval "$CMD_ADD" 2>&1); then
+            echo "APPLIED (fallback): $CMD_ADD"
+        else
+            echo "ERROR: No se pudo aplicar netem: $tc_output"
+            return 1
+        fi
+    fi
+
+    # Verificar que los parámetros se aplicaron correctamente
+    local actual
+    actual=$(tc qdisc show dev "$IFACE" 2>/dev/null | head -1)
+    if echo "$actual" | grep -q "netem"; then
+        echo "VERIFY OK: $actual"
+    else
+        echo "VERIFY FAIL: netem no encontrado en qdisc. Actual: $actual"
+        return 1
     fi
 }
 
